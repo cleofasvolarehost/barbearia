@@ -10,7 +10,7 @@ interface MercadoPagoBrickProps {
   amount: number;
   email: string;
   publicKey?: string;
-  onSuccess: (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => void;
+  onSuccess: (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any, installments?: number) => void;
   onError: (error: any) => void;
   customization?: {
     paymentMethods?: {
@@ -143,12 +143,16 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
                         // Allow submission if we have a token OR if it's a non-card method (Pix/Ticket)
                         // For Pix/Ticket, token is undefined, but payment_method_id is present.
                         if (formData.token || formData.payment_method_id) {
+                            const installments = typeof formData.installments === 'number'
+                                ? formData.installments
+                                : (formData.token ? 1 : undefined);
                             onSuccess(
                                 formData.token, 
                                 formData.issuer_id, 
                                 formData.payment_method_id,
                                 formData.card?.cardholder?.name,
-                                formData.payer?.identification
+                                formData.payer?.identification,
+                                installments
                             );
                             resolve();
                         } else {
