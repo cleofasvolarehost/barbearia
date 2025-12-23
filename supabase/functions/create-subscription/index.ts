@@ -141,13 +141,51 @@ serve(async (req) => {
     // We need to fetch the user_id from the establishment owner
     const { data: establishment, error: estError } = await supabase
         .from('establishments')
-        .select('owner_id')
+        .select('owner_id, subscription_end_date')
         .eq('id', establishment_id)
         .single();
 
     if (estError) console.error('Error fetching establishment owner:', estError);
 
     const userId = establishment?.owner_id;
+    let subStatus = 'pending';
+
+    // NEW: Handle Immediate Approval (e.g. Credit Card)
+    if (data.status === 'approved') {
+        subStatus = 'active';
+        
+        console.log('Payment Approved Immediately. Updating Establishment...');
+
+        // 1. Calculate Date
+        const daysToAdd = plan.days_valid || 30;
+        let newEndDate = new Date();
+        const currentEndDate = establishment?.subscription_end_date ? new Date(establishment.subscription_end_date) : null;
+
+        if (currentEndDate && currentEndDate > new Date()) {
+             newEndDate = new Date(currentEndDate.getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
+        } else {
+             newEndDate = new Date(new Date().getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
+        }
+
+        // 2. Update Establishment
+        await supabase
+            .from('establishments')
+            .update({
+                subscription_status: 'active',
+                subscription_plan: plan.name,
+                subscription_end_date: newEndDate.toISOString()
+            })
+            .eq('id', establishment_id);
+
+        // 3. Log Payment
+         await supabase.from('saas_payments').insert({
+            establishment_id,
+            amount: transactionAmount,
+            status: 'paid',
+            payment_method: payment_method_id,
+            invoice_url: data.transaction_details?.external_resource_url 
+        });
+    }
 
     // Check if subscription already exists (maybe update it?) or insert new.
     // Ideally we might want to upsert or check for pending ones. 
@@ -159,7 +197,7 @@ serve(async (req) => {
         .insert({
             user_id: userId, // Can be null if not found, but schema says NOT NULL?
             plan_id: plan_id,
-            status: 'pending',
+            status: subStatus,
             mp_payment_id: data.id.toString(),
             // mp_subscription_id? This is a one-off payment for subscription or recurring?
             // The user says "subscriptions no SaaS". Usually implies recurring. 

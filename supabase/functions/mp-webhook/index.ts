@@ -95,6 +95,19 @@ serve(async (req) => {
         console.log(`Processing ${type} for Establishment: ${establishment_id}`);
 
         if (payment.status === 'approved') {
+            // 0. Idempotency Check
+            // Check if this payment was already processed (subscription status is already active)
+            const { data: existingSub } = await supabase
+                .from('subscriptions')
+                .select('status')
+                .eq('mp_payment_id', String(bodyId))
+                .single();
+
+            if (existingSub?.status === 'active') {
+                console.log('Payment already processed (Subscription is active). Skipping.');
+                return new Response('Already Processed', { status: 200 });
+            }
+
             // 1. Get Plan Details (for duration)
             const { data: plan } = await supabase
                 .from('saas_plans')
