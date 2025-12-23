@@ -49,6 +49,7 @@ export interface Establishment {
   mp_access_token?: string;
   mp_public_key?: string;
   accepts_pix?: boolean;
+  service_categories?: string[];
   
   // Scheduling
   slot_interval_min?: number;

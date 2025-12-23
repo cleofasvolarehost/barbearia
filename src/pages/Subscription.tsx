@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, Check, Zap, Shield, Crown, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useEstablishment } from '../contexts/EstablishmentContext';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
-import { PaymentScreen } from '../components/PaymentScreen';
+import { MercadoPagoBrick } from '../components/payment/MercadoPagoBrick';
 
 const PLANS = [
   {
@@ -38,73 +39,71 @@ const PLANS = [
 
 export default function Subscription() {
   const { establishment, refreshEstablishment } = useEstablishment();
+  const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentStep, setPaymentStep] = useState<'plans' | 'payment'>('plans');
   const [loading, setLoading] = useState(false);
-  const [saasPixKey, setSaasPixKey] = useState('');
-
-  // Fetch SaaS Pix Key (Simulating fetching from saas_settings)
-  useEffect(() => {
-    const fetchSettings = async () => {
-        const { data } = await supabase
-            .from('saas_settings')
-            .select('setting_value')
-            .eq('setting_key', 'manual_pix_key')
-            .single();
-        
-        if (data) {
-            setSaasPixKey(data.setting_value);
-        } else {
-            // Fallback default for demo
-            setSaasPixKey('000.000.000-00');
-        }
-    };
-    fetchSettings();
-  }, []);
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId);
     setPaymentStep('payment');
   };
 
-  const handlePaymentSuccess = async () => {
+  const handleBrickSuccess = async (token: string, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
     setLoading(true);
     try {
-        if (!establishment || !selectedPlan) return;
+        if (!establishment || !selectedPlan || !user?.email) return;
 
-        const plan = PLANS.find(p => p.id === selectedPlan);
-        let monthsToAdd = 1;
-        if (selectedPlan === 'quarterly') monthsToAdd = 3;
-        if (selectedPlan === 'annual') monthsToAdd = 12;
-
-        // Calculate new end date
-        const currentEnd = new Date(establishment.subscription_end_date || new Date());
-        // If expired, start from today. If active, add to current end.
-        const baseDate = currentEnd < new Date() ? new Date() : currentEnd;
-        baseDate.setMonth(baseDate.getMonth() + monthsToAdd);
-
-        const { error } = await supabase
-            .from('establishments')
-            .update({
-                subscription_status: 'active',
-                subscription_plan: selectedPlan,
-                subscription_end_date: baseDate.toISOString()
+        // Call Edge Function to create subscription
+        const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({
+                token,
+                payer_email: user.email,
+                plan_type: selectedPlan,
+                issuer_id,
+                payment_method_id,
+                card_holder_name,
+                identification
             })
-            .eq('id', establishment.id);
+        });
 
-        if (error) throw error;
+        const data = await response.json();
 
-        await refreshEstablishment();
-        toast.success(`Assinatura renovada com sucesso! Plano ${plan?.name} ativado.`);
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao processar assinatura');
+        }
+
+        // Success logic
+        // We might want to update the local establishment status immediately for better UX
+        // ideally webhook handles this, but we can do a manual update via another edge function or RLS if allowed.
+        // For now, let's assume the backend/webhook will sync, but we show success.
+        
+        // Optimistic update (optional, usually safer to wait for webhook)
+        // But for user feedback:
+        toast.success(`Assinatura ${selectedPlan} iniciada com sucesso!`);
+        
+        // Refresh to see if status changed (if webhook was instant)
+        setTimeout(() => refreshEstablishment(), 2000);
+        
         setPaymentStep('plans');
         setSelectedPlan(null);
 
-    } catch (error) {
-        console.error('Renewal error:', error);
-        toast.error('Erro ao processar renovação.');
+    } catch (error: any) {
+        console.error('Subscription error:', error);
+        toast.error(`Erro: ${error.message}`);
     } finally {
         setLoading(false);
     }
+  };
+
+  const handleBrickError = (error: any) => {
+      console.error('Brick Error:', error);
+      toast.error('Erro no processamento do cartão. Tente novamente.');
   };
 
   const currentPlan = PLANS.find(p => p.id === establishment?.subscription_plan) || PLANS[0];
@@ -116,14 +115,36 @@ export default function Subscription() {
   if (paymentStep === 'payment' && selectedPlan) {
       const plan = PLANS.find(p => p.id === selectedPlan);
       return (
-        <PaymentScreen 
-            method="pix-auto" // Using auto simulation for better UX
-            amount={plan?.price || 0}
-            serviceName={`Assinatura ${plan?.name} - CyberSalon`}
-            barberName="CyberSalon SaaS"
-            onBack={() => setPaymentStep('plans')}
-            onSuccess={handlePaymentSuccess}
-        />
+        <div className="min-h-screen bg-[#121212] text-white p-4 md:p-8 flex flex-col items-center justify-center">
+            <div className="max-w-md w-full">
+                <button 
+                    onClick={() => setPaymentStep('plans')}
+                    className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                >
+                    <ArrowRight className="w-4 h-4 rotate-180" /> Voltar aos planos
+                </button>
+
+                <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-8 shadow-2xl">
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-bold mb-2">Finalizar Assinatura</h2>
+                        <p className="text-gray-400">
+                            Plano <span className="text-[#7C3AED] font-bold">{plan?.name}</span> - R$ {plan?.price}
+                        </p>
+                    </div>
+
+                    <MercadoPagoBrick 
+                        amount={plan?.price || 100}
+                        email={user?.email || ''}
+                        onSuccess={handleBrickSuccess}
+                        onError={handleBrickError}
+                    />
+                    
+                    <p className="text-xs text-center text-gray-500 mt-6">
+                        Ambiente Seguro Mercado Pago. Seus dados são criptografados.
+                    </p>
+                </div>
+            </div>
+        </div>
       );
   }
 
