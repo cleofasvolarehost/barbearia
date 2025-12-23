@@ -1,9 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Phone, ArrowRight, Sparkles } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import * as yup from 'yup';
-import { yupResolver } from '@hookform/resolvers/yup';
 
 interface PhoneCaptureModalProps {
   isOpen: boolean;
@@ -12,43 +10,79 @@ interface PhoneCaptureModalProps {
   loading?: boolean;
 }
 
-interface PhoneFormData {
-  phone: string;
-}
+// 1. maskPhone: Formats value to (DD) 99999-9999
+const maskPhone = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  
+  if (digits.length === 0) return '';
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+};
 
-const schema = yup.object().shape({
-  phone: yup.string()
-    .required('Telefone é obrigatório')
-    .matches(/^\(\d{2}\) \d{5}-\d{4}$/, 'Formato inválido: (99) 99999-9999'),
-});
+// 2. isValidBrazilWhatsApp: Validates strictly 11 digits and 3rd digit '9'
+const isValidBrazilWhatsApp = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  // Must be 11 digits
+  if (digits.length !== 11) return false;
+  // 3rd digit (index 2) must be 9
+  if (digits[2] !== '9') return false;
+  return true;
+};
 
 export function PhoneCaptureModal({ isOpen, onClose, onConfirm, loading }: PhoneCaptureModalProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
-    setValue
-  } = useForm<PhoneFormData>({
-    resolver: yupResolver(schema) as any,
+    setValue,
+    watch,
+    setError,
+    clearErrors,
+    formState: { errors, isValid }
+  } = useForm<{ phone: string }>({
+    mode: 'onChange'
   });
 
-  const onSubmit = (data: PhoneFormData) => {
-    onConfirm(data.phone);
+  const phoneValue = watch('phone');
+
+  // Real-time Validation and Masking
+  useEffect(() => {
+    if (!phoneValue) return;
+
+    // Apply Mask
+    const masked = maskPhone(phoneValue);
+    if (masked !== phoneValue) {
+      setValue('phone', masked);
+    }
+
+    // Validate Logic
+    if (isValidBrazilWhatsApp(phoneValue)) {
+      clearErrors('phone');
+    } else {
+      // Only show error if user has typed enough to potentialy be valid or finished typing
+      const digits = phoneValue.replace(/\D/g, '');
+      if (digits.length === 11 && digits[2] !== '9') {
+          setError('phone', { type: 'custom', message: 'Celular deve começar com 9 (ex: 38 9xxxx-xxxx).' });
+      } else if (digits.length > 0 && digits.length < 11) {
+         // Optional: Don't show "incomplete" error aggressively while typing, 
+         // but since we want to disable button, we can just rely on isValid state for button
+         // and show specific error only on blur or submit. 
+         // For now, let's keep it clean: error if invalid format
+         setError('phone', { type: 'custom', message: 'Número incompleto. Digite DDD + 9 dígitos.' });
+      }
+    }
+  }, [phoneValue, setValue, setError, clearErrors]);
+
+  const onSubmit = (data: { phone: string }) => {
+    if (isValidBrazilWhatsApp(data.phone)) {
+      // Normalize to E.164 (55 + digits)
+      const digits = data.phone.replace(/\D/g, '');
+      const e164 = `55${digits}`;
+      onConfirm(e164);
+    }
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 11) value = value.slice(0, 11);
-    
-    if (value.length > 2) {
-      value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
-    }
-    if (value.length > 9) {
-      value = `${value.slice(0, 9)}-${value.slice(9)}`;
-    }
-    setValue('phone', value);
-    return e;
-  };
+  const isFormValid = isValidBrazilWhatsApp(phoneValue || '');
 
   return (
     <AnimatePresence>
@@ -100,19 +134,21 @@ export function PhoneCaptureModal({ isOpen, onClose, onConfirm, loading }: Phone
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                       <input
                         {...register('phone')}
-                        onChange={handlePhoneChange}
+                        type="tel"
                         className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED] outline-none transition-all placeholder-gray-600"
-                        placeholder="(99) 99999-9999"
+                        placeholder="(38) 99999-9999"
                         autoFocus
+                        maxLength={15} // (11) 91234-5678 is 15 chars
                       />
                     </div>
                     {errors.phone && <p className="text-red-500 text-xs mt-1 ml-1">{errors.phone.message}</p>}
+                    {!errors.phone && isFormValid && <p className="text-green-500 text-xs mt-1 ml-1">Número válido!</p>}
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !isFormValid}
                   className="w-full py-4 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-white font-bold text-lg shadow-lg shadow-[#7C3AED]/30 hover:shadow-xl hover:shadow-[#7C3AED]/40 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {loading ? (
