@@ -1,23 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 }
 
 serve(async (req) => {
-  // Handle CORS preflight request
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders, status: 200 })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     // Create Admin Client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        throw new Error('Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    }
+
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      supabaseServiceKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -47,14 +54,7 @@ serve(async (req) => {
     }
 
     // Process Action
-    let body;
-    try {
-        body = await req.json()
-    } catch (e) {
-        throw new Error('Invalid JSON body')
-    }
-    
-    const { action, userId, payload } = body
+    const { action, userId, payload } = await req.json()
     let result;
 
     switch (action) {
@@ -97,7 +97,12 @@ serve(async (req) => {
                 .from('usuarios')
                 .update(payload.data)
                 .eq('id', userId)
+                .eq('establishment_id', payload.data.establishment_id) // Ensure we are updating the right user context if needed
+             
+             // If update failed (maybe no rows matched), check if we need to handle it differently
+             // But usually profError captures DB errors. 
              if (profError) throw profError
+             
              result = { message: 'Profile updated' }
              break;
 
@@ -134,10 +139,11 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error: any) {
+    console.error('Error processing request:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
