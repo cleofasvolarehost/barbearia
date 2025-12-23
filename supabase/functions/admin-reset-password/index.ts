@@ -27,6 +27,12 @@ serve(async (req) => {
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // 3. Verify Authorization (Super Admin Only)
+    // NOTE: We need to create a client with the anon key to verify the user's JWT properly 
+    // because getUser() with service_role key will ALWAYS return the user if the token is valid, ignoring RLS.
+    // However, for this admin function, we manually check the 'usuarios' table, so service_role is fine
+    // BUT we must pass the user's JWT to context if we wanted RLS.
+    // Here we just extract the user from the JWT to check their ID against the 'usuarios' table.
+    
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing Authorization header')
     
@@ -34,23 +40,29 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
 
     if (userError || !user) {
-        console.error('Auth Error:', userError);
-        throw new Error('Invalid Token')
+        console.error('Auth Error (getUser):', userError);
+        throw new Error('Invalid Token or User not found')
     }
+
+    console.log('Requester User ID:', user.id); // DEBUG
 
     // Check role in public.usuarios
     const { data: profile, error: profileError } = await supabaseClient
       .from('usuarios')
       .select('tipo')
       .eq('id', user.id)
-      .single()
+      .maybeSingle() // Use maybeSingle instead of single to avoid 406 error if not found
 
     // DEBUG: Log do perfil encontrado
-    console.log('Profile Check:', { profile, error: profileError, userId: user.id });
+    console.log('Profile Check Result:', { profile, error: profileError, userId: user.id });
 
-    if (profileError || profile?.tipo !== 'super_admin') {
+    if (profileError || !profile || profile.tipo !== 'super_admin') {
       console.error('Permission Denied. User Role:', profile?.tipo);
-      return new Response(JSON.stringify({ error: 'Unauthorized: Super Admin access required', debug_role: profile?.tipo }), {
+      return new Response(JSON.stringify({ 
+        error: 'Unauthorized: Super Admin access required', 
+        debug_role: profile?.tipo,
+        debug_error: profileError
+      }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
