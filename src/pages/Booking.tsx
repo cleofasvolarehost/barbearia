@@ -10,6 +10,7 @@ import { CheckCircleIcon } from '@heroicons/react/20/solid';
 import { GlassCard } from '../components/GlassCard';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, User, Scissors, Check, ChevronRight, ChevronLeft, Phone } from 'lucide-react';
+import { PhoneCaptureModal } from '../components/modals/PhoneCaptureModal';
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
@@ -40,6 +41,10 @@ export default function Booking() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   
+  // Phone Capture State
+  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+  const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
+
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [availableSlots, setAvailableSlots] = useState<{time: string, label: string, available: boolean}[]>([]);
@@ -331,6 +336,29 @@ export default function Booking() {
 
     try {
         setLoading(true);
+
+        // 1. Phone Validation for Authenticated Users
+        if (authUser) {
+            const { data: userProfile, error: profileError } = await supabase
+                .from('usuarios')
+                .select('telefone')
+                .eq('id', authUser.id)
+                .single();
+
+            if (profileError) {
+                console.error('Error fetching user profile:', profileError);
+                // Continue? Maybe safer to block or ask
+            }
+
+            // If no phone found or empty string
+            if (!userProfile?.telefone) {
+                setLoading(false);
+                setIsPhoneModalOpen(true);
+                return; // STOP BOOKING
+            }
+        }
+
+        // 2. Proceed with Booking
         const { data: appointmentData, error: appointmentError } = await supabase
             .from('agendamentos')
             .insert([
@@ -367,6 +395,31 @@ export default function Booking() {
     } finally {
         setLoading(false);
     }
+  };
+
+  const handlePhoneUpdate = async (phone: string) => {
+      if (!authUser) return;
+      setIsUpdatingPhone(true);
+      try {
+          const { error } = await supabase
+              .from('usuarios')
+              .update({ telefone: phone })
+              .eq('id', authUser.id);
+
+          if (error) throw error;
+
+          toast.success('Telefone salvo com sucesso!');
+          setIsPhoneModalOpen(false);
+          
+          // Retry booking automatically
+          handleBooking();
+
+      } catch (error) {
+          console.error('Error updating phone:', error);
+          toast.error('Erro ao salvar telefone. Tente novamente.');
+      } finally {
+          setIsUpdatingPhone(false);
+      }
   };
 
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -756,6 +809,13 @@ export default function Booking() {
         )}
 
       </div>
+
+      <PhoneCaptureModal 
+        isOpen={isPhoneModalOpen}
+        onClose={() => setIsPhoneModalOpen(false)}
+        onConfirm={handlePhoneUpdate}
+        loading={isUpdatingPhone}
+      />
     </div>
   );
 }
