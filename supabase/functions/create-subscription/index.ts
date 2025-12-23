@@ -40,7 +40,7 @@ serve(async (req) => {
         .eq('setting_key', 'mp_access_token')
         .single();
     
-    if (saasSettings?.setting_value) {
+    if (saasSettings?.setting_value && saasSettings.setting_value.length > 20) {
         mpAccessToken = saasSettings.setting_value;
     } else {
         mpAccessToken = Deno.env.get('SAAS_MP_ACCESS_TOKEN') || Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN') || '';
