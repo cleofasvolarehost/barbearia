@@ -8,9 +8,10 @@ interface SubscriptionControllerProps {
   onClose: () => void;
   plans: any[];
   onSuccess: () => void;
+  initialTab?: string;
 }
 
-export function SubscriptionController({ isOpen, onClose, plans, onSuccess }: SubscriptionControllerProps) {
+export function SubscriptionController({ isOpen, onClose, plans, onSuccess, initialTab }: SubscriptionControllerProps) {
   const { establishment } = useEstablishment();
 
   // Logic 1: Determine Status
