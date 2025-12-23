@@ -9,6 +9,7 @@ export const appointmentsService = {
       .select(
         `
           id,
+          establishment_id,
           usuario_id,
           barbeiro_id,
           data,
@@ -23,6 +24,10 @@ export const appointmentsService = {
         `,
         { count: 'exact' }
       );
+
+    if (filters.establishment_id) {
+      query = query.eq('establishment_id', filters.establishment_id);
+    }
 
     if (filters.dateRange) {
       const startDate = format(parseISO(filters.dateRange.start), 'yyyy-MM-dd');
@@ -139,6 +144,7 @@ export const appointmentsService = {
     const { data: appointment, error } = await supabase
       .from('agendamentos')
       .insert({
+        establishment_id: payload.barbershop_id,
         usuario_id: clientId,
         barbeiro_id: payload.barber_id,
         data: appointmentDate,
@@ -267,7 +273,7 @@ const mapDatabaseAppointment = (row: any): Appointment => {
 
   return {
     id: row.id,
-    barbershop_id: row.barbeiro_id,
+    barbershop_id: row.establishment_id,
     client_id: row.usuario_id,
     client_name: row.usuario?.nome,
     client_phone: row.usuario?.telefone,
