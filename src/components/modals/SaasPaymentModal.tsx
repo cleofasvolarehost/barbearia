@@ -42,6 +42,14 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
     }
   }, [isOpen]);
 
+  // Handle plan updates or currency changes if needed
+  useEffect(() => {
+    if (isOpen) {
+        // Ensure default is pix on open if not set
+        if (!selectedMethod) setSelectedMethod('pix');
+    }
+  }, [isOpen, plan]);
+
   if (!isOpen) return null;
 
   const isValidPlan = plan && plan.id && Number(plan.price) > 0;
@@ -210,20 +218,22 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                         transition={{ delay: 0.1 }}
                         className="mx-6 mb-6"
                     >
-                        <div className="p-5 rounded-3xl bg-gradient-to-br from-white/10 to-white/[0.02] border border-white/20 backdrop-blur-xl">
+                        <div className="p-5 rounded-3xl bg-[#1E1E1E] border border-white/10 shadow-xl">
                             <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#10B981] flex items-center justify-center flex-shrink-0 shadow-[0_0_30px_rgba(124,58,237,0.4)]">
-                                    <Crown className="w-7 h-7 text-white" />
+                                <div className="w-14 h-14 rounded-2xl bg-[#1E1E1E] flex items-center justify-center flex-shrink-0 shadow-[0_0_30px_rgba(124,58,237,0.2)] border border-white/10 relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                    <Crown className="w-7 h-7 text-white relative z-10" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-black text-lg text-white mb-1">{plan.name}</h3>
-                                    <p className="text-sm text-gray-400">Cobrado mensalmente</p>
+                                    <h3 className="font-bold text-lg text-white mb-0.5">{plan.name}</h3>
+                                    <p className="text-xs text-gray-400">Cobrado mensalmente</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#7C3AED] to-[#10B981]">
-                                        R$ {Number(plan.price).toFixed(2)}
-                                    </p>
-                                    <p className="text-xs text-gray-500">/mês</p>
+                                    <div className="flex items-baseline justify-end gap-1">
+                                        <span className="text-lg font-bold text-purple-400">R$</span>
+                                        <span className="text-3xl font-bold text-white">{Number(plan.price).toFixed(2)}</span>
+                                        <span className="text-xs text-gray-500">/mês</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -309,8 +319,8 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
 
                             {/* Payment Method Selection */}
                             <div className="px-6 flex-1">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">
-                                    Escolha a forma de pagamento
+                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-4">
+                                    ESCOLHA A FORMA DE PAGAMENTO
                                 </h3>
                                 <div className="space-y-3">
                                     {paymentMethodsList.map((method, index) => (
@@ -321,37 +331,43 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                             transition={{ delay: 0.3 + index * 0.1 }}
                                             onClick={() => setSelectedMethod(method.id)}
                                             className={`
-                                                w-full min-h-[80px] p-5 rounded-2xl transition-all relative overflow-hidden group
+                                                w-full p-4 rounded-2xl transition-all relative overflow-hidden group border text-left
                                                 ${selectedMethod === method.id 
-                                                    ? 'border-2 border-[#10B981] bg-white/10' 
-                                                    : 'border-2 border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                                                    ? 'border-[#10B981] bg-[#1E1E1E]' 
+                                                    : 'border-white/10 bg-[#1E1E1E] hover:border-white/20'
                                                 }
                                             `}
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div className={`
-                                                    w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
+                                                    w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
                                                     ${selectedMethod === method.id 
-                                                        ? 'bg-[#10B981] text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
-                                                        : 'bg-white/10 text-gray-400 group-hover:text-white'
+                                                        ? 'bg-[#10B981] text-white' 
+                                                        : 'bg-white/5 text-gray-400'
                                                     }
                                                 `}>
                                                     {method.icon}
                                                 </div>
-                                                <div className="flex-1 text-left">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <h4 className="font-bold text-white">{method.title}</h4>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                        <h4 className="font-bold text-white text-sm">{method.title}</h4>
                                                         {method.badge && (
-                                                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30">
+                                                            <span className={`
+                                                                px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
+                                                                ${method.id === 'pix' 
+                                                                    ? 'bg-[#10B981] text-white' 
+                                                                    : 'bg-white/10 text-white'
+                                                                }
+                                                            `}>
                                                                 {method.badge}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-sm text-gray-400">{method.subtitle}</p>
+                                                    <p className="text-xs text-gray-400">{method.subtitle}</p>
                                                 </div>
                                                 {selectedMethod === method.id && (
-                                                    <div className="w-6 h-6 rounded-full bg-[#10B981] flex items-center justify-center">
-                                                        <Check className="w-4 h-4 text-white" />
+                                                    <div className="w-6 h-6 rounded-full bg-[#10B981] flex items-center justify-center shadow-lg shadow-green-500/20">
+                                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
                                                     </div>
                                                 )}
                                             </div>
@@ -362,34 +378,51 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
 
                             {/* Render Brick based on selection */}
                             <div className="px-6 pb-6 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                {selectedMethod && (
-                                <MercadoPagoBrick 
-                                    key={selectedMethod} // FORCE RE-RENDER on method change to auto-select single option
-                                    amount={Number(plan.price)} 
-                                    email={user?.email || ''}
-                                    onSuccess={handleBrickSuccess}
-                                    onError={handleBrickError}
-                                    customization={{
-                                        paymentMethods: {
-                                            creditCard: selectedMethod === 'credit' ? 'all' : [],
-                                            debitCard: selectedMethod === 'credit' ? 'all' : [],
-                                            ticket: selectedMethod === 'boleto' ? 'all' : [],
-                                            bankTransfer: selectedMethod === 'pix' ? ['pix'] : [],
-                                            maxInstallments: 1
-                                        },
-                                        visual: {
-                                            style: {
-                                                theme: 'dark',
-                                                customVariables: {
-                                                    formPadding: '0px',
-                                                    baseColor: '#10B981'
-                                                }
+                                {/* Only show Payment Method header if not Pix (since Pix has its own distinct flow in some cases, but here we unify) */}
+                                <div className="bg-[#1E1E1E] rounded-t-2xl border-x border-t border-white/10 p-4 pb-2 flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedMethod ? 'border-[#10B981]' : 'border-gray-500'}`}>
+                                        {selectedMethod && <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />}
+                                    </div>
+                                    {selectedMethod === 'pix' && <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center"><img src="https://logopng.com.br/logos/pix-106.png" className="w-4 h-4 object-contain" alt="Pix" /></div>}
+                                    <span className="font-bold text-white">
+                                        {selectedMethod === 'pix' ? 'Pix' : 
+                                         selectedMethod === 'credit' ? 'Cartão de Crédito' : 
+                                         selectedMethod === 'boleto' ? 'Boleto Bancário' : 'Meios de pagamento'}
+                                    </span>
+                                </div>
+                                
+                                <div className="bg-[#1E1E1E] rounded-b-2xl border-x border-b border-white/10 p-4 pt-0">
+                                    {selectedMethod && (
+                                    <MercadoPagoBrick 
+                                        key={selectedMethod} // FORCE RE-RENDER on method change
+                                        amount={Number(plan.price)} 
+                                        email={user?.email || ''}
+                                        onSuccess={handleBrickSuccess}
+                                        onError={handleBrickError}
+                                        customization={{
+                                            paymentMethods: {
+                                                creditCard: selectedMethod === 'credit' ? 'all' : [],
+                                                debitCard: selectedMethod === 'credit' ? 'all' : [],
+                                                ticket: selectedMethod === 'boleto' ? 'all' : [],
+                                                bankTransfer: selectedMethod === 'pix' ? ['pix'] : [],
+                                                maxInstallments: 1
                                             },
-                                            hidePaymentButton: false 
-                                        }
-                                    }}
-                                />
-                                )}
+                                            visual: {
+                                                style: {
+                                                    theme: 'dark',
+                                                    customVariables: {
+                                                        formPadding: '0px',
+                                                        baseColor: '#10B981',
+                                                        formBackgroundColor: '#1E1E1E',
+                                                        inputBackgroundColor: '#2A2A2A',
+                                                    }
+                                                },
+                                                hidePaymentButton: false 
+                                            }
+                                        }}
+                                    />
+                                    )}
+                                </div>
                             </div>
                         </>
                     )}
