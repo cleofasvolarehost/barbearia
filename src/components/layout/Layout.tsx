@@ -8,6 +8,7 @@ import { FloatingActionButton } from '../FloatingActionButton';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { TopNavbar } from './TopNavbar';
 
 interface LayoutProps {
   children: ReactNode;
@@ -77,6 +78,9 @@ export default function Layout({ children }: LayoutProps) {
         ${showSidebar ? 'md:ml-64' : ''} 
         ${showMobileNav ? 'pt-20 pb-24 md:pt-0 md:pb-8' : ''} 
       `}>
+        {/* Top Navbar for Context Switching */}
+        {showSidebar && <TopNavbar />}
+        
         {children}
       </main>
 

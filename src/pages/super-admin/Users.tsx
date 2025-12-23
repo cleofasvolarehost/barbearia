@@ -261,15 +261,32 @@ export default function SuperAdminUsers() {
                                         </div>
                                     </td>
                                     <td className="p-4 text-right relative">
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setActiveActionId(activeActionId === user.id ? null : user.id);
-                                            }}
-                                            className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
-                                        >
-                                            <MoreVertical className="w-5 h-5" />
-                                        </button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button 
+                                                onClick={() => setShowPasswordModal(user.id)}
+                                                className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-yellow-400 transition-colors"
+                                                title="Mudar Senha"
+                                            >
+                                                <Lock className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDelete(user.id)}
+                                                className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-red-400 transition-colors"
+                                                title="Deletar Usuário"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                            
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveActionId(activeActionId === user.id ? null : user.id);
+                                                }}
+                                                className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                            >
+                                                <MoreVertical className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                         
                                         {/* Dropdown Menu */}
                                         {activeActionId === user.id && (
@@ -277,14 +294,8 @@ export default function SuperAdminUsers() {
                                                 <button onClick={() => setShowEditModal(user)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
                                                     <Edit className="w-4 h-4 text-blue-400" /> Editar Dados
                                                 </button>
-                                                <button onClick={() => setShowPasswordModal(user.id)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
-                                                    <Lock className="w-4 h-4 text-yellow-400" /> Mudar Senha
-                                                </button>
                                                 <button onClick={() => handleSuspend(user.id, false)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
                                                     <Ban className="w-4 h-4 text-orange-400" /> Suspender
-                                                </button>
-                                                <button onClick={() => handleDelete(user.id)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-red-400 border-t border-white/10">
-                                                    <Trash2 className="w-4 h-4" /> Deletar Usuário
                                                 </button>
                                             </div>
                                         )}
