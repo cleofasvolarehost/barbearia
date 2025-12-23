@@ -86,7 +86,8 @@ export default function Subscription() {
 
   const handleBrickError = (error: any) => {
       console.error('Brick Error:', error);
-      toast.error('Erro no processamento do cartão. Tente novamente.');
+      const msg = typeof error === 'string' ? error : 'Erro no processamento do cartão. Tente novamente.';
+      toast.error(msg);
   };
 
   const isExpired = establishment?.subscription_end_date && new Date(establishment.subscription_end_date) < new Date();

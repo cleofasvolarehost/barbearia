@@ -9,11 +9,12 @@ declare global {
 interface MercadoPagoBrickProps {
   amount: number;
   email: string;
+  publicKey?: string;
   onSuccess: (token: string, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => void;
   onError: (error: any) => void;
 }
 
-export function MercadoPagoBrick({ amount, email, onSuccess, onError }: MercadoPagoBrickProps) {
+export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSuccess, onError }: MercadoPagoBrickProps) {
   const brickInitialized = useRef(false);
 
   useEffect(() => {
@@ -51,23 +52,15 @@ export function MercadoPagoBrick({ amount, email, onSuccess, onError }: MercadoP
 
     try {
         // First try to get from props or context if dynamic (SaaS), otherwise fallback to env (Platform)
-        // Ideally this should come from an API call if it varies per tenant, but for now we rely on env or props.
-        // NOTE: The user error log says "Chave pública do Mercado Pago não encontrada nas variáveis de ambiente."
-        // This means it's failing at import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY check.
-        
-        let publicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
+        let publicKey = propPublicKey || import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
         
         // Debugging logs
-        console.log('MP Public Key from Env:', publicKey ? 'Found' : 'Missing');
+        console.log('MP Public Key:', publicKey ? 'Found' : 'Missing');
 
         if (!publicKey) {
-             // Fallback to a hardcoded test key IF we are in development, just to unblock the UI (NOT FOR PRODUCTION)
-             // But better to just throw clear error.
-             console.error('Environment Variables:', import.meta.env);
-             // Attempt to recover with a default test key if env is missing (Safety Net)
-             // This is the public test key found in previous contexts or a generic sandbox one
-             publicKey = 'TEST-19366606-25e2-4d7a-b152-7b02927951d4';
-             console.warn('Usando chave de teste fallback para Mercado Pago');
+             console.error('Mercado Pago Public Key is missing. Please set VITE_MERCADO_PAGO_PUBLIC_KEY in .env');
+             onError('Configuração de pagamento incompleta (Chave Pública ausente).');
+             return;
         }
 
         const mp = new window.MercadoPago(publicKey, {
