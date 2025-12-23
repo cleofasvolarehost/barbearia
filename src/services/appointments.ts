@@ -189,6 +189,18 @@ export const appointmentsService = {
     return data;
   },
 
+  async deleteAppointment(id: string) {
+    // Delete related services first (just in case cascade isn't set up)
+    await supabase.from('agendamentos_servicos').delete().eq('agendamento_id', id);
+
+    const { error } = await supabase
+      .from('agendamentos')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
   async getAvailability(barberId: string, date: string) {
     const { data, error } = await supabase
       .from('agendamentos')

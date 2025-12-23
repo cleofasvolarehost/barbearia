@@ -50,6 +50,21 @@ export function AppointmentModal({ appointment, isOpen, onClose, onUpdate }: App
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirm('Tem certeza que deseja EXCLUIR este agendamento permanentemente?')) return;
+    setLoading(true);
+    try {
+      await appointmentsService.deleteAppointment(appointment.id);
+      onUpdate();
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao excluir agendamento');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const startTime = parseISO(appointment.starts_at);
   const endTime = parseISO(appointment.ends_at);
 
@@ -174,7 +189,7 @@ export function AppointmentModal({ appointment, isOpen, onClose, onUpdate }: App
                       disabled={loading}
                       className="flex items-center justify-center gap-2 px-4 py-3 bg-transparent border border-red-500/30 text-red-500 rounded-xl hover:bg-red-500/10 font-bold transition-all"
                     >
-                      <Trash2 className="w-5 h-5" /> Cancelar
+                      <X className="w-5 h-5" /> Cancelar
                     </button>
                   </>
                 )}
@@ -198,11 +213,13 @@ export function AppointmentModal({ appointment, isOpen, onClose, onUpdate }: App
                   </>
                 )}
 
-                {(appointment.status === 'cancelled' || appointment.status === 'completed' || appointment.status === 'no_show') && (
-                  <p className="col-span-2 text-center text-sm text-gray-500 italic py-2">
-                    Nenhuma ação disponível para este status
-                  </p>
-                )}
+                <button
+                  onClick={handleDelete}
+                  disabled={loading}
+                  className="col-span-2 flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500/20 font-bold transition-all mt-2"
+                >
+                  <Trash2 className="w-5 h-5" /> Excluir Permanentemente
+                </button>
               </div>
             )}
           </div>
