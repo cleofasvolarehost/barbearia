@@ -133,6 +133,24 @@ export default function AdminPlans() {
     }
   };
 
+  const handleDelete = async (plan: SaasPlan) => {
+    if (!window.confirm(`Tem certeza que deseja excluir o plano "${plan.name}"?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('saas_plans')
+        .delete()
+        .eq('id', plan.id);
+
+      if (error) throw error;
+      toast.success('Plano excluído com sucesso!');
+      fetchPlans();
+    } catch (error) {
+      console.error('Error deleting plan:', error);
+      toast.error('Erro ao excluir plano');
+    }
+  };
+
   if (loading) return <div className="p-8 text-white">Carregando Planos...</div>;
 
   return (
