@@ -81,6 +81,20 @@ export default function BookSlug() {
           whatsappConfig = whatsappData;
         }
 
+        if (!whatsappConfig && (shopData.wordnet_instance_id || shopData.wordnet_token)) {
+          whatsappConfig = {
+            is_active: !!shopData.wordnet_instance_id,
+            instance_id: shopData.wordnet_instance_id,
+            api_token: shopData.wordnet_token,
+            templates: {
+              confirmation: 'Olá {nome}, seu agendamento foi confirmado para {horario}.'
+            },
+            triggers: {
+              confirmation: true
+            }
+          };
+        }
+
         setShop({ ...shopData, whatsapp_config: whatsappConfig });
 
         const { data: servicesData } = await supabase
@@ -288,6 +302,7 @@ export default function BookSlug() {
         price: selectedService.preco,
         barberName: selectedBarber.nome,
         serviceName: selectedService.nome,
+        establishmentId: shop?.id,
         shopConfig: shop?.whatsapp_config,
         clientPhone,
         clientName

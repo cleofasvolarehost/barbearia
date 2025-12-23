@@ -11,6 +11,7 @@ interface CreateBookingParams {
   price: number;
   barberName?: string;
   serviceName?: string;
+  establishmentId?: string;
   // WhatsApp Context
   shopConfig?: any;
   clientPhone?: string;
@@ -67,13 +68,13 @@ export const bookingsApi = {
             }, bookingId);
 
             // 3. Salva Log no Painel
-            await supabase.from('whatsapp_logs').insert({
-                booking_id: bookingId,
-                phone_number: cleanPhone,
-                status: success ? 'sent' : 'failed',
-                message_body: 'Agendamento Confirmado',
-                client_id: params.userId !== 'guest_placeholder' ? params.userId : null,
-                created_at: new Date().toISOString()
+            await supabase.rpc('log_whatsapp_attempt', {
+                p_establishment_id: params.establishmentId,
+                p_phone: cleanPhone,
+                p_type: 'confirmation',
+                p_body: 'Agendamento Confirmado',
+                p_status: success ? 'sent' : 'failed',
+                p_response: { success, bookingId }
             });
 
         } catch (wsError) {
