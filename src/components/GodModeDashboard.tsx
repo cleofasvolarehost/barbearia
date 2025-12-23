@@ -3,7 +3,7 @@ import { GlassCard } from './GlassCard';
 import { Users, TrendingUp, Clock, DollarSign, RefreshCw, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, getHours } from 'date-fns';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, getHours, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import { useEstablishment } from '../contexts/EstablishmentContext';
@@ -40,15 +40,6 @@ const generateHeatmapData = () => {
   }));
 };
 
-const staffLeaderboardData = [
-  { id: 1, name: 'Ricardo Santos', revenue: 8750, avatar: 'https://i.pravatar.cc/150?img=12', rank: 1 },
-  { id: 2, name: 'Carlos Mendes', revenue: 7320, avatar: 'https://i.pravatar.cc/150?img=33', rank: 2 },
-  { id: 3, name: 'Felipe Costa', revenue: 6890, avatar: 'https://i.pravatar.cc/150?img=52', rank: 3 },
-  { id: 4, name: 'Bruno Silva', revenue: 5240, avatar: 'https://i.pravatar.cc/150?img=68', rank: 4 },
-  { id: 5, name: 'André Oliveira', revenue: 4680, avatar: 'https://i.pravatar.cc/150?img=15', rank: 5 },
-];
-
-const retentionData = { newClients: 35, returningClients: 65 };
 // ---------------------------------------------------------------------
 
 export function GodModeDashboard() {
@@ -68,8 +59,9 @@ export function GodModeDashboard() {
   const [professionals, setProfessionals] = useState<ProfessionalStatus[]>([]);
 
   // Analytics State
-  const [heatmapData, setHeatmapData] = useState<any[]>([]);
-  const maxRevenue = Math.max(...staffLeaderboardData.map(s => s.revenue));
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [retention, setRetention] = useState({ newClients: 0, returningClients: 0 });
+  const maxRevenue = leaderboard.length > 0 ? Math.max(...leaderboard.map(s => s.revenue)) : 1;
 
   // --- Helpers for Analytics Visuals ---
   const getHeatColor = (occupancy: number) => {
@@ -127,10 +119,17 @@ export function GodModeDashboard() {
 
       if (apptsError) throw apptsError;
 
-      // 2. Fetch Week Appointments for Heatmap
+      // 2. Fetch Week Appointments for Heatmap & Leaderboard
       const { data: weekAppts, error: weekError } = await supabase
         .from('agendamentos')
-        .select('data, horario, status')
+        .select(`
+            data, 
+            horario, 
+            status, 
+            preco_total,
+            barbeiro_id,
+            barbeiro:barbeiros(id, nome, foto_url)
+        `)
         .eq('establishment_id', establishment.id)
         .gte('data', startWeekStr)
         .lte('data', endWeekStr)
@@ -146,12 +145,100 @@ export function GodModeDashboard() {
 
       if (barbersError) throw barbersError;
 
+      // 4. Fetch Retention Data (Last 30 Days)
+      const thirtyDaysAgo = format(subDays(today, 30), 'yyyy-MM-dd');
+      // Get all clients who had appointments in last 30 days
+      const { data: recentClientsData, error: recentClientsError } = await supabase
+        .from('agendamentos')
+        .select('usuario_id')
+        .eq('establishment_id', establishment.id)
+        .gte('data', thirtyDaysAgo)
+        .neq('status', 'cancelado');
+      
+      if (recentClientsError) throw recentClientsError;
+
+      // Get unique client IDs
+      const uniqueClientIds = [...new Set((recentClientsData || []).map(a => a.usuario_id).filter(Boolean))];
+
+      // Check if these clients had appointments BEFORE the period
+      let newClientsCount = 0;
+      let returningClientsCount = 0;
+
+      if (uniqueClientIds.length > 0) {
+          // For each client, check if they have any appointment < thirtyDaysAgo
+          // Optimized: Fetch counts for these users where data < thirtyDaysAgo
+          // But Supabase doesn't support "IN" well with aggregation in one go easily without RPC.
+          // Alternative: Fetch min(data) for these users.
+          
+          const { data: firstVisits, error: visitsError } = await supabase
+             .from('agendamentos')
+             .select('usuario_id, data')
+             .in('usuario_id', uniqueClientIds)
+             .eq('establishment_id', establishment.id)
+             .order('data', { ascending: true });
+          
+          if (!visitsError && firstVisits) {
+             const firstVisitMap = new Map();
+             firstVisits.forEach(v => {
+                 if (!firstVisitMap.has(v.usuario_id)) {
+                     firstVisitMap.set(v.usuario_id, v.data);
+                 }
+             });
+
+             uniqueClientIds.forEach(clientId => {
+                 const firstDate = firstVisitMap.get(clientId);
+                 if (firstDate && new Date(firstDate) >= new Date(thirtyDaysAgo)) {
+                     newClientsCount++;
+                 } else {
+                     returningClientsCount++;
+                 }
+             });
+          }
+      }
+
+      const totalRetention = newClientsCount + returningClientsCount;
+      const retentionStats = {
+          newClients: totalRetention > 0 ? Math.round((newClientsCount / totalRetention) * 100) : 0,
+          returningClients: totalRetention > 0 ? Math.round((returningClientsCount / totalRetention) * 100) : 0
+      };
+      setRetention(retentionStats);
+
+
       // --- PROCESS DATA ---
 
       // KPI Stats
       const appts = todayAppts || [];
       const revenue = appts.reduce((acc, curr) => curr.status !== 'cancelado' ? acc + (curr.preco_total || 0) : acc, 0);
       const avgTicket = appts.length > 0 ? revenue / appts.length : 0;
+
+      // Leaderboard Processing
+      const revenueByBarber: Record<string, { name: string, revenue: number, avatar: string }> = {};
+      
+      (weekAppts || []).forEach(apt => {
+          if (!apt.barbeiro_id) return;
+          const barber = apt.barbeiro as any; // Type assertion since join structure
+          const barberId = apt.barbeiro_id;
+          
+          if (!revenueByBarber[barberId]) {
+              revenueByBarber[barberId] = {
+                  name: barber?.nome || 'Desconhecido',
+                  revenue: 0,
+                  avatar: barber?.foto_url || `https://ui-avatars.com/api/?name=${barber?.nome || 'User'}&background=random`
+              };
+          }
+          revenueByBarber[barberId].revenue += (apt.preco_total || 0);
+      });
+
+      const leaderboardSorted = Object.values(revenueByBarber)
+          .sort((a, b) => b.revenue - a.revenue)
+          .map((item, index) => ({
+              id: index, // temp id
+              ...item,
+              rank: index + 1
+          }))
+          .slice(0, 5); // Top 5
+      
+      setLeaderboard(leaderboardSorted);
 
       // Professional Status
       const now = new Date();
@@ -373,12 +460,15 @@ export function GodModeDashboard() {
              </div>
 
              <div className="space-y-5">
-                {staffLeaderboardData.map((staff, index) => (
+                {leaderboard.length === 0 ? (
+                    <div className="text-center text-gray-500 py-4">Sem dados esta semana</div>
+                ) : (
+                    leaderboard.map((staff) => (
                     <div key={staff.id} className="relative">
                         <div className="flex items-center gap-4 mb-2">
                             <div className="flex items-center gap-3 w-32">
                                 <span className={`font-bold ${getMedalColor(staff.rank)} w-5 text-center`}>#{staff.rank}</span>
-                                <img src={staff.avatar} alt={staff.name} className="w-8 h-8 rounded-full ring-2 ring-white/10" />
+                                <img src={staff.avatar} alt={staff.name} className="w-8 h-8 rounded-full ring-2 ring-white/10 object-cover" />
                                 <span className="text-sm font-semibold text-white truncate">{staff.name.split(' ')[0]}</span>
                             </div>
                             <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
@@ -392,7 +482,7 @@ export function GodModeDashboard() {
                             <span className="text-xs font-mono text-gray-400 w-16 text-right">R${(staff.revenue/1000).toFixed(1)}k</span>
                         </div>
                     </div>
-                ))}
+                )))}
              </div>
           </GlassCard>
 
@@ -408,24 +498,24 @@ export function GodModeDashboard() {
                      <circle cx="50" cy="50" r="40" fill="none" stroke="#333" strokeWidth="10" />
                      <motion.circle 
                         cx="50" cy="50" r="40" fill="none" stroke="#7C3AED" strokeWidth="10"
-                        strokeDasharray={`${(retentionData.returningClients / 100) * 251} 251`}
+                        strokeDasharray={`${(retention.returningClients / 100) * 251} 251`}
                         initial={{ strokeDasharray: "0 251" }}
-                        animate={{ strokeDasharray: `${(retentionData.returningClients / 100) * 251} 251` }}
+                        animate={{ strokeDasharray: `${(retention.returningClients / 100) * 251} 251` }}
                         transition={{ duration: 1.5 }}
                         className="drop-shadow-[0_0_8px_rgba(124,58,237,0.5)]"
                      />
                      <motion.circle 
                         cx="50" cy="50" r="40" fill="none" stroke="#2DD4BF" strokeWidth="10"
-                        strokeDasharray={`${(retentionData.newClients / 100) * 251} 251`}
-                        strokeDashoffset={-((retentionData.returningClients / 100) * 251)}
+                        strokeDasharray={`${(retention.newClients / 100) * 251} 251`}
+                        strokeDashoffset={-((retention.returningClients / 100) * 251)}
                         initial={{ strokeDasharray: "0 251" }}
-                        animate={{ strokeDasharray: `${(retentionData.newClients / 100) * 251} 251` }}
+                        animate={{ strokeDasharray: `${(retention.newClients / 100) * 251} 251` }}
                         transition={{ duration: 1.5, delay: 0.5 }}
                         className="drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]"
                      />
                  </svg>
                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                     <span className="text-3xl font-black text-white">{retentionData.returningClients}%</span>
+                     <span className="text-3xl font-black text-white">{retention.returningClients}%</span>
                      <span className="text-[10px] text-gray-400 uppercase tracking-widest">Retorno</span>
                  </div>
              </div>
@@ -433,11 +523,11 @@ export function GodModeDashboard() {
              <div className="flex gap-6 mt-6">
                  <div className="flex items-center gap-2">
                      <div className="w-3 h-3 rounded-full bg-[#7C3AED]"></div>
-                     <span className="text-sm text-gray-400">Recorrentes</span>
+                     <span className="text-sm text-gray-400">Recorrentes ({retention.returningClients}%)</span>
                  </div>
                  <div className="flex items-center gap-2">
                      <div className="w-3 h-3 rounded-full bg-[#2DD4BF]"></div>
-                     <span className="text-sm text-gray-400">Novos</span>
+                     <span className="text-sm text-gray-400">Novos ({retention.newClients}%)</span>
                  </div>
              </div>
           </GlassCard>
