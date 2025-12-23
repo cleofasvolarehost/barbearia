@@ -100,16 +100,15 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
             },
             customization: {
                 paymentMethods: {
-                    creditCard: 'all',
-                    debitCard: 'all',
-                    ticket: 'all',
-                    bankTransfer: 'all',
-                    pix: 'all',
-                    maxInstallments: 12
+                    minInstallments: 1,
+                    maxInstallments: 12,
+                    types: {
+                        excluded: [] // Ensure nothing is excluded
+                    }
                 },
                 visual: {
                     style: {
-                        theme: 'dark' // Matches our dark UI
+                        theme: 'dark'
                     }
                 }
             },
