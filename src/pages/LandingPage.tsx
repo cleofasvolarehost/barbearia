@@ -33,7 +33,7 @@ export default function LandingPage() {
 
   const onLogin = () => {
     if (user) {
-      navigate('/minhas-reservas');
+      navigate('/dashboard');
     } else {
       navigate('/login');
     }
