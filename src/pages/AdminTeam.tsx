@@ -10,7 +10,7 @@ import { Switch } from '@headlessui/react';
 interface DaySchedule {
     active: boolean;
     workHours: { start: string; end: string };
-    lunchBreak: { start: string; end: string };
+    lunchBreak: { start: string; end: string; active?: boolean };
 }
 
 type WeeklySchedule = Record<number, DaySchedule>;
@@ -137,7 +137,7 @@ export default function AdminTeam() {
       }
   };
 
-  const updateDaySchedule = (field: keyof DaySchedule | 'workStart' | 'workEnd' | 'lunchStart' | 'lunchEnd', value: any) => {
+  const updateDaySchedule = (field: keyof DaySchedule | 'workStart' | 'workEnd' | 'lunchStart' | 'lunchEnd' | 'lunchActive', value: any) => {
       setWeeklySchedule(prev => {
           const currentDay = prev[selectedDay];
           const updatedDay = { ...currentDay };
@@ -145,6 +145,7 @@ export default function AdminTeam() {
           if (field === 'active') updatedDay.active = value;
           else if (field === 'workStart') updatedDay.workHours = { ...updatedDay.workHours, start: value };
           else if (field === 'workEnd') updatedDay.workHours = { ...updatedDay.workHours, end: value };
+          else if (field === 'lunchActive') updatedDay.lunchBreak = { ...updatedDay.lunchBreak, active: value };
           else if (field === 'lunchStart') updatedDay.lunchBreak = { ...updatedDay.lunchBreak, start: value };
           else if (field === 'lunchEnd') updatedDay.lunchBreak = { ...updatedDay.lunchBreak, end: value };
 
@@ -196,10 +197,18 @@ export default function AdminTeam() {
               initialSchedule[i] = {
                   active: activeDays.includes(i),
                   workHours: { ...safeWorkHours },
-                  lunchBreak: { ...safeLunch }
+                  lunchBreak: { ...safeLunch, active: true } // Default active for legacy
               };
           }
       }
+      
+      // Ensure all days have the lunchBreak.active property
+      Object.keys(initialSchedule).forEach(key => {
+          const day = initialSchedule[parseInt(key)];
+          if (day.lunchBreak && day.lunchBreak.active === undefined) {
+              day.lunchBreak.active = true;
+          }
+      });
       
       setWeeklySchedule(initialSchedule);
       setIsScheduleModalOpen(true);
@@ -209,10 +218,10 @@ export default function AdminTeam() {
   const fullDaysMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
   const currentDayConfig = weeklySchedule[selectedDay] || {
-      active: false,
-      workHours: { start: '09:00', end: '19:00' },
-      lunchBreak: { start: '12:00', end: '13:00' }
-  };
+       active: false,
+       workHours: { start: '09:00', end: '19:00' },
+       lunchBreak: { start: '12:00', end: '13:00', active: true }
+   };
 
   return (
     <div className="p-4 pb-24 max-w-7xl mx-auto">
@@ -438,33 +447,50 @@ export default function AdminTeam() {
                           </div>
 
                           <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
-                              <div className="col-span-2">
+                              <div className="col-span-2 flex justify-between items-center">
                                   <h4 className="text-sm font-bold text-white flex items-center gap-2">
                                       <span className="w-2 h-2 rounded-full bg-yellow-500"></span> Pausa para Almoço
                                   </h4>
-                              </div>
-                              <div>
-                                  <label className="block text-sm text-gray-400 mb-1">Início da Pausa</label>
-                                  <div className="relative">
-                                      <input 
-                                          type="time"
-                                          value={currentDayConfig.lunchBreak.start}
-                                          onChange={e => updateDaySchedule('lunchStart', e.target.value)}
-                                          className="w-full bg-black/20 border border-white/10 rounded-xl p-2.5 pl-3 text-white outline-none focus:border-[#7C3AED] font-mono"
+                                  
+                                  <Switch
+                                      checked={currentDayConfig.lunchBreak.active !== false} // Default true
+                                      onChange={(val: boolean) => updateDaySchedule('lunchActive', val)}
+                                      className={`${
+                                          currentDayConfig.lunchBreak.active !== false ? 'bg-[#7C3AED]' : 'bg-gray-600'
+                                      } relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none`}
+                                  >
+                                      <span
+                                          className={`${
+                                              currentDayConfig.lunchBreak.active !== false ? 'translate-x-4' : 'translate-x-1'
+                                          } inline-block h-3 w-3 transform rounded-full bg-white transition-transform`}
                                       />
-                                      <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                  </Switch>
+                              </div>
+                              
+                              <div className={`col-span-2 grid grid-cols-2 gap-4 transition-opacity ${currentDayConfig.lunchBreak.active !== false ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+                                  <div>
+                                      <label className="block text-sm text-gray-400 mb-1">Início da Pausa</label>
+                                      <div className="relative">
+                                          <input 
+                                              type="time"
+                                              value={currentDayConfig.lunchBreak.start}
+                                              onChange={e => updateDaySchedule('lunchStart', e.target.value)}
+                                              className="w-full bg-black/20 border border-white/10 rounded-xl p-2.5 pl-3 text-white outline-none focus:border-[#7C3AED] font-mono"
+                                          />
+                                          <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                      </div>
                                   </div>
-                              </div>
-                              <div>
-                                  <label className="block text-sm text-gray-400 mb-1">Fim da Pausa</label>
-                                  <div className="relative">
-                                      <input 
-                                          type="time"
-                                          value={currentDayConfig.lunchBreak.end}
-                                          onChange={e => updateDaySchedule('lunchEnd', e.target.value)}
-                                          className="w-full bg-black/20 border border-white/10 rounded-xl p-2.5 pl-3 text-white outline-none focus:border-[#7C3AED] font-mono"
-                                      />
-                                      <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                  <div>
+                                      <label className="block text-sm text-gray-400 mb-1">Fim da Pausa</label>
+                                      <div className="relative">
+                                          <input 
+                                              type="time"
+                                              value={currentDayConfig.lunchBreak.end}
+                                              onChange={e => updateDaySchedule('lunchEnd', e.target.value)}
+                                              className="w-full bg-black/20 border border-white/10 rounded-xl p-2.5 pl-3 text-white outline-none focus:border-[#7C3AED] font-mono"
+                                          />
+                                          <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                      </div>
                                   </div>
                               </div>
                           </div>
