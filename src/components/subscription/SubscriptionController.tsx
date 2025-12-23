@@ -1,6 +1,6 @@
 import { useEstablishment } from '../../contexts/EstablishmentContext';
 import { NewPurchaseModal } from '../modals/NewPurchaseModal';
-import { SubscriptionManagerModal } from '../modals/SubscriptionManagerModal';
+import { SubscriptionManagerModal, Tab } from '../modals/SubscriptionManagerModal';
 import { PaymentRetryModal } from '../modals/PaymentRetryModal';
 
 interface SubscriptionControllerProps {
@@ -8,7 +8,7 @@ interface SubscriptionControllerProps {
   onClose: () => void;
   plans: any[];
   onSuccess: () => void;
-  initialTab?: string;
+  initialTab?: Tab;
 }
 
 export function SubscriptionController({ isOpen, onClose, plans, onSuccess, initialTab }: SubscriptionControllerProps) {

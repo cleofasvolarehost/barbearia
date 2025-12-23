@@ -18,7 +18,7 @@ interface SubscriptionManagerModalProps {
   initialTab?: Tab;
 }
 
-type Tab = 'plans' | 'renew' | 'payment';
+export type Tab = 'plans' | 'renew' | 'payment';
 
 export function SubscriptionManagerModal({ isOpen, onClose, plans, onSuccess, initialTab = 'plans' }: SubscriptionManagerModalProps) {
   const { establishment, refreshEstablishment } = useEstablishment();

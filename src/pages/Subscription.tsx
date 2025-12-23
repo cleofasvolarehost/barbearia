@@ -6,13 +6,14 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { SubscriptionController } from '../components/subscription/SubscriptionController';
+import { Tab } from '../components/modals/SubscriptionManagerModal';
 
 export default function Subscription() {
   const { establishment, refreshEstablishment } = useEstablishment();
   const { user } = useAuth();
   const [plans, setPlans] = useState<any[]>([]);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const [managerTab, setManagerTab] = useState('plans');
+  const [managerTab, setManagerTab] = useState<Tab>('plans');
   const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
