@@ -100,11 +100,12 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
             },
             customization: {
                 paymentMethods: {
-                    creditCard: 'all', // Recurrence usually implies Credit Card
-                    // debitCard: 'all', // Optional
-                    // ticket: 'all',
-                    // bankTransfer: 'all',
-                    maxInstallments: 1
+                    creditCard: 'all',
+                    debitCard: 'all',
+                    ticket: 'all',
+                    bankTransfer: 'all',
+                    pix: 'all',
+                    maxInstallments: 12
                 },
                 visual: {
                     style: {
