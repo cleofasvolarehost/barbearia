@@ -41,6 +41,7 @@ export function DesktopSidebar({ onViewChange }: DesktopSidebarProps) {
     { id: '/admin/marketing', icon: Megaphone, label: 'Marketing', roles: ['owner'] },
     { id: '/admin/whatsapp', icon: MessageCircle, label: 'WhatsApp', roles: ['owner'] },
     { id: '/admin/configuracoes', icon: Settings, label: 'Configurações', roles: ['owner'] },
+    { id: '/admin/setup', icon: Building2, label: 'Minha Barbearia', roles: ['owner'] },
     { id: '/admin/pagamentos', icon: DollarSign, label: 'Recebimentos', roles: ['owner'] },
     { id: '/clientes', icon: Users, label: 'Clientes', roles: ['owner', 'barber'] },
     { id: '/financeiro', icon: DollarSign, label: 'Financeiro', roles: ['owner'] },

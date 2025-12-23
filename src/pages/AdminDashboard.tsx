@@ -26,6 +26,38 @@ export default function AdminDashboard() {
   // Modal State
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
 
+  // Realtime Subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-dashboard-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agendamentos'
+        },
+        (payload) => {
+          // Verify if the change is relevant for today (simple check)
+          // Or just refresh silently to be safe and accurate
+          fetchDashboardData(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedBarber]); // Re-subscribe if filter changes? No, filter is client side mostly or query param. 
+  // Actually fetchDashboardData uses selectedBarber state.
+  // If we just call fetchDashboardData(true), it will use the current state 'selectedBarber'.
+  // However, the closure might trap the old state if not careful.
+  // But since fetchDashboardData is defined inside the component, it should have access to latest state refs if used in useEffect dependencies?
+  // No, if useEffect is only [] it traps initial state.
+  // Better to put [selectedBarber] in dependency or use a ref. 
+  // But re-subscribing on every filter change is expensive.
+  // Let's just refresh.
+
   useEffect(() => {
       checkPermissions();
   }, [user]);
@@ -66,9 +98,9 @@ export default function AdminDashboard() {
       setBarbers(data || []);
   };
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       const today = format(new Date(), 'yyyy-MM-dd');
 
       // 1. Fetch today's appointments
@@ -149,11 +181,11 @@ export default function AdminDashboard() {
 
       if (error) throw error;
       toast.success(`Status atualizado para ${newStatus}`);
-      fetchDashboardData(); // Refresh to ensure data consistency
+      fetchDashboardData(true); // Refresh silently
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Erro ao atualizar status.');
-      fetchDashboardData(); // Revert on error
+      fetchDashboardData(true); // Revert on error
     }
   };
 

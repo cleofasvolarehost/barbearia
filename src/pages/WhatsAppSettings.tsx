@@ -22,6 +22,10 @@ export default function WhatsAppSettings() {
     is_active: false
   });
 
+  // OpenAI Config State
+  const [openAIKey, setOpenAIKey] = useState('');
+  const [showAIKey, setShowAIKey] = useState(false);
+
   const [templates, setTemplates] = useState({
     reminder: 'Olá {nome}, seu agendamento é amanhã às {horario}. Confirmado?',
     rescue: 'Oi {nome}, sumiu! Ganhe 10% OFF voltando essa semana.',
@@ -36,6 +40,11 @@ export default function WhatsAppSettings() {
             api_token: establishment.wordnet_token || '',
             is_active: !!establishment.wordnet_instance_id
         });
+
+        // Load OpenAI Key if stored (usually stored securely, here simulated or in local storage for now if not in DB)
+        // For security, keys are often not sent back to client fully, but here we assume direct management
+        const savedAIKey = localStorage.getItem('openai_api_key') || '';
+        setOpenAIKey(savedAIKey);
 
         if (establishment.whatsapp_templates) {
             // Merge defaults with saved to ensure all keys exist
@@ -56,7 +65,8 @@ export default function WhatsAppSettings() {
     };
 
     try {
-      const response = await generateAIResponse(prompts[type]);
+      // Use the key from state if available, otherwise fallback to env
+      const response = await generateAIResponse(prompts[type], openAIKey);
       if (response) {
         // Clean up quotes if AI adds them
         const cleanResponse = response.replace(/^["']|["']$/g, '');
@@ -87,6 +97,12 @@ export default function WhatsAppSettings() {
             .eq('id', establishment.id);
 
         if (error) throw error;
+        
+        // Save OpenAI Key locally for now (client-side preference)
+        if (openAIKey) {
+            localStorage.setItem('openai_api_key', openAIKey);
+        }
+
         toast.success('Configurações salvas!');
         
         await refreshEstablishment();
@@ -169,56 +185,87 @@ export default function WhatsAppSettings() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* API Credentials */}
-        <GlassCard className="p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Key className="w-5 h-5 text-[#2DD4BF]" />
-            Credenciais da API
-          </h2>
-          
-          <div className="space-y-4">
-            <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Instance ID (u)</label>
-                <input
-                    type="text"
-                    value={config.instance_id}
-                    onChange={(e) => setConfig({...config, instance_id: e.target.value})}
-                    placeholder="Ex: i-123456789"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-[#25D366] outline-none font-mono"
-                />
-            </div>
+        <div className="space-y-6">
+            <GlassCard className="p-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Key className="w-5 h-5 text-[#2DD4BF]" />
+                Credenciais da API
+            </h2>
             
-            <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">API Token (p)</label>
-                <div className="relative">
+            <div className="space-y-4">
+                <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Instance ID (u)</label>
                     <input
-                        type="password"
-                        value={config.api_token}
-                        onChange={(e) => setConfig({...config, api_token: e.target.value})}
-                        placeholder="••••••••••••••••"
+                        type="text"
+                        value={config.instance_id}
+                        onChange={(e) => setConfig({...config, instance_id: e.target.value})}
+                        placeholder="Ex: i-123456789"
                         className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-[#25D366] outline-none font-mono"
                     />
-                    <ShieldCheck className="absolute right-3 top-3 w-5 h-5 text-gray-500" />
+                </div>
+                
+                <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">API Token (p)</label>
+                    <div className="relative">
+                        <input
+                            type="password"
+                            value={config.api_token}
+                            onChange={(e) => setConfig({...config, api_token: e.target.value})}
+                            placeholder="••••••••••••••••"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-[#25D366] outline-none font-mono"
+                        />
+                        <ShieldCheck className="absolute right-3 top-3 w-5 h-5 text-gray-500" />
+                    </div>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                    <button
+                        onClick={handleTestConnection}
+                        className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 text-white font-bold transition-all"
+                    >
+                        Testar Conexão
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex-1 py-3 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-black font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                        <Save className="w-4 h-4" />
+                        {saving ? 'Salvando...' : 'Salvar Config'}
+                    </button>
                 </div>
             </div>
+            </GlassCard>
 
-            <div className="pt-4 flex gap-3">
-                <button
-                    onClick={handleTestConnection}
-                    className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 text-white font-bold transition-all"
-                >
-                    Testar Conexão
-                </button>
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex-1 py-3 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-black font-bold transition-all flex items-center justify-center gap-2"
-                >
-                    <Save className="w-4 h-4" />
-                    {saving ? 'Salvando...' : 'Salvar Config'}
-                </button>
-            </div>
-          </div>
-        </GlassCard>
+            {/* AI Config */}
+            <GlassCard className="p-6 border-t-4 border-t-[#7C3AED]">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Wand2 className="w-5 h-5 text-[#7C3AED]" />
+                    Configuração de IA
+                </h2>
+                <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">OpenAI API Key (Opcional)</label>
+                    <div className="relative">
+                        <input
+                            type={showAIKey ? "text" : "password"}
+                            value={openAIKey}
+                            onChange={(e) => setOpenAIKey(e.target.value)}
+                            placeholder="sk-..."
+                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-[#7C3AED] outline-none font-mono"
+                        />
+                        <button 
+                            onClick={() => setShowAIKey(!showAIKey)}
+                            className="absolute right-3 top-3 text-gray-500 hover:text-white"
+                        >
+                            {showAIKey ? <ShieldCheck className="w-5 h-5" /> : <Key className="w-5 h-5" />}
+                        </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                        Necessário para gerar modelos de mensagem com IA. Sua chave é salva apenas no seu navegador.
+                    </p>
+                </div>
+            </GlassCard>
+        </div>
 
         {/* Message Templates */}
         <GlassCard className="p-6">

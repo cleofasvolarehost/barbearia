@@ -11,6 +11,7 @@ export default function GeneralSettings() {
   
   const [formData, setFormData] = useState({
     name: '',
+    slug: '',
     phone: '',
     open_hour: '09:00',
     close_hour: '19:00',
@@ -21,6 +22,7 @@ export default function GeneralSettings() {
     if (establishment) {
       setFormData({
         name: establishment.name || '',
+        slug: establishment.slug || '',
         phone: establishment.phone || '',
         open_hour: establishment.open_hour || '09:00',
         close_hour: establishment.close_hour || '19:00',
@@ -38,6 +40,7 @@ export default function GeneralSettings() {
         .from('establishments')
         .update({
           name: formData.name,
+          slug: formData.slug,
           phone: formData.phone,
           open_hour: formData.open_hour,
           close_hour: formData.close_hour,
@@ -88,6 +91,21 @@ export default function GeneralSettings() {
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-400 mb-2">Link da Barbearia (Slug)</label>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                <span className="text-gray-500 text-sm">cyberbarber.app/</span>
+                <input 
+                  type="text"
+                  value={formData.slug}
+                  onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})}
+                  className="flex-1 bg-transparent border-none text-white focus:ring-0 outline-none p-0 font-bold"
+                  placeholder="minha-barbearia"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Este é o link que seus clientes usarão para agendar.</p>
+            </div>
+
             <div>
               <label className="block text-sm text-gray-400 mb-2">Nome da Barbearia</label>
               <input 
