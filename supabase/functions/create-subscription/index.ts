@@ -21,7 +21,8 @@ serve(async (req) => {
       issuer_id, 
       payment_method_id, 
       identification,
-      card_holder_name
+      card_holder_name,
+      installments
     } = await req.json()
 
     // 1. Strict Validation
@@ -97,6 +98,7 @@ serve(async (req) => {
         description: `Assinatura ${plan.name}`,
         payment_method_id: payment_method_id,
         payer: payer,
+        installments: installments || 1, // Default to 1 if missing
         metadata: {
             type: 'saas_subscription', // Updated from 'saas_renewal' to be more generic or specific
             establishment_id: establishment_id,

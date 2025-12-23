@@ -20,7 +20,7 @@ export const appointmentsService = {
         client_phone,
         created_at,
         barbeiro:barbeiros(id, nome, foto_url),
-        client:usuarios(id, nome, telefone, avatar_url),
+        client:usuarios(id, nome, telefone),
         services:agendamentos_servicos(
           servico:servicos(id, nome, duracao_minutos, preco)
         )
@@ -114,7 +114,7 @@ export const appointmentsService = {
           id: item.client.id,
           full_name: item.client.nome,
           phone: item.client.telefone,
-          avatar_url: item.client.avatar_url
+          avatar_url: null // item.client.avatar_url
         } : undefined
       };
     });
