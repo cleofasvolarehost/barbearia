@@ -117,16 +117,21 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
         if (status === 'approved') {
             setShowSuccess(true);
             toast.success(`Assinatura iniciada com sucesso!`);
-            setTimeout(() => {
-                onSuccess();
+            setTimeout(async () => {
+                await onSuccess(); // Await refresh
                 onClose();
             }, 3000);
         } else if (payment_method_id === 'pix' && status === 'pending') {
              console.warn('PIX Pending but missing QR Code data', data);
              toast.error('Erro ao gerar QR Code. Verifique o console ou tente novamente.');
         } else {
-             toast('Pagamento em processamento.', { icon: '⏳' });
-             onSuccess(); 
+             // Handle 'in_process' or other statuses
+             if (status === 'in_process') {
+                 toast('Pagamento em análise. Liberaremos assim que confirmar.', { icon: '⏳' });
+             } else {
+                 toast(`Status do pagamento: ${status}`, { icon: 'ℹ️' });
+             }
+             await onSuccess(); 
              onClose();
         }
 

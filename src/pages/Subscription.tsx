@@ -49,8 +49,8 @@ export default function Subscription() {
     setIsPaymentModalOpen(true);
   };
 
-  const handlePaymentSuccess = () => {
-      refreshEstablishment();
+  const handlePaymentSuccess = async () => {
+      await refreshEstablishment();
       // Optionally redirect or show confetti
   };
 
