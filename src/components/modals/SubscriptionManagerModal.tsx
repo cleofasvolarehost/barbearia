@@ -77,7 +77,7 @@ export function SubscriptionManagerModal({ isOpen, onClose, plans, onSuccess, in
   const handleDowngrade = async (plan: any) => {
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('saas-subscription-manager', {
+      const { error } = await supabase.functions.invoke('manage-subscription', {
         body: {
           action: 'downgrade',
           establishment_id: establishment?.id,
