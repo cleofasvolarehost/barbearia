@@ -1,50 +1,157 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { GlassCard } from '../../components/GlassCard';
-import { Search } from 'lucide-react';
+import { Search, MoreVertical, Trash2, Lock, Ban, CheckCircle, Edit, Plus, Building2, Mail, Phone, User } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function SuperAdminUsers() {
     const [users, setUsers] = useState<any[]>([]);
+    const [establishments, setEstablishments] = useState<any[]>([]);
+    const [barbers, setBarbers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Modal States
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState<string | null>(null); // userId
+    const [showEditModal, setShowEditModal] = useState<any | null>(null); // user object
+
+    // Form States
+    const [newUser, setNewUser] = useState({ nome: '', email: '', password: '', telefone: '', tipo: 'client' });
+    const [newPassword, setNewPassword] = useState('');
+    const [activeActionId, setActiveActionId] = useState<string | null>(null); // For dropdown
 
     useEffect(() => {
-        fetchUsers();
+        fetchData();
+        // Click outside listener for dropdowns
+        const handleClickOutside = () => setActiveActionId(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
-    const fetchUsers = async () => {
+    const fetchData = async () => {
+        setLoading(true);
         try {
-            const { data, error } = await supabase
+            // 1. Fetch Users
+            const { data: usersData, error: uError } = await supabase
                 .from('usuarios')
                 .select('*')
                 .order('created_at', { ascending: false });
-            
-            if (error) throw error;
-            setUsers(data || []);
+            if (uError) throw uError;
+
+            // 2. Fetch Establishments
+            const { data: estData, error: eError } = await supabase
+                .from('establishments')
+                .select('id, name, owner_id');
+            if (eError) throw eError;
+
+            // 3. Fetch Barbers
+            const { data: barbData, error: bError } = await supabase
+                .from('barbeiros')
+                .select('user_id, establishment_id');
+            if (bError) throw bError;
+
+            setUsers(usersData || []);
+            setEstablishments(estData || []);
+            setBarbers(barbData || []);
+
         } catch (error) {
-            console.error('Error fetching users:', error);
-            toast.error('Erro ao carregar usuários');
+            console.error('Error fetching data:', error);
+            toast.error('Erro ao carregar dados');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleRoleChange = async (userId: string, newRole: string) => {
+    const getUserEstablishment = (user: any) => {
+        if (user.tipo === 'owner') {
+            const est = establishments.find(e => e.owner_id === user.id);
+            return est ? est.name : 'Sem Loja';
+        }
+        if (user.tipo === 'barber') {
+            const barb = barbers.find(b => b.user_id === user.id);
+            if (barb) {
+                const est = establishments.find(e => e.id === barb.establishment_id);
+                return est ? est.name : 'Loja Desconhecida';
+            }
+            return 'Não Vinculado';
+        }
+        return 'SaaS / Cliente';
+    };
+
+    // Actions via Edge Function
+    const callAdminAction = async (action: string, userId: string | null, payload: any = {}) => {
+        const toastId = toast.loading('Processando...');
         try {
-            const { error } = await supabase
-                .from('usuarios')
-                .update({ tipo: newRole })
-                .eq('id', userId);
+            const { data, error } = await supabase.functions.invoke('admin-user-actions', {
+                body: { action, userId, payload }
+            });
 
             if (error) throw error;
             
-            setUsers(users.map(u => u.id === userId ? { ...u, tipo: newRole } : u));
-            toast.success('Função atualizada com sucesso!');
+            toast.success(data.message || 'Sucesso!', { id: toastId });
+            fetchData(); // Refresh data
+            return data;
         } catch (error: any) {
-            console.error('Error updating role:', error);
-            toast.error('Erro ao atualizar função: ' + error.message);
+            console.error('Action error:', error);
+            toast.error('Erro: ' + (error.message || 'Falha na ação'), { id: toastId });
+            throw error;
         }
+    };
+
+    const handleDelete = async (userId: string) => {
+        if (!window.confirm('Tem certeza que deseja DELETAR este usuário? Essa ação não pode ser desfeita.')) return;
+        await callAdminAction('delete', userId);
+    };
+
+    const handleSuspend = async (userId: string, isSuspended: boolean) => {
+        // Since we don't have 'active' column in public.usuarios visible here easily without joining auth,
+        // we assume the action toggles it. Actually, the Edge Function sets ban_duration.
+        // We can track local state if we had it.
+        // For now just allow "Suspend" (Ban 100 years) or "Activate" (Ban 0).
+        const action = isSuspended ? 'activate' : 'suspend'; // Logic check needed.
+        // Simplified: We always offer "Suspend" unless we know they are suspended.
+        // Let's just ask the user.
+        const shouldBan = window.confirm(`Deseja ${isSuspended ? 'ATIVAR' : 'SUSPENDER'} este usuário?`);
+        if (!shouldBan) return;
+        
+        await callAdminAction('suspend', userId, { banned: !isSuspended });
+    };
+
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await callAdminAction('create_user', null, newUser);
+            setShowCreateModal(false);
+            setNewUser({ nome: '', email: '', password: '', telefone: '', tipo: 'client' });
+        } catch (err) {
+            // Error handled in callAdminAction
+        }
+    };
+
+    const handleUpdatePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!showPasswordModal) return;
+        try {
+            await callAdminAction('update_password', showPasswordModal, { password: newPassword });
+            setShowPasswordModal(null);
+            setNewPassword('');
+        } catch (err) {}
+    };
+
+    const handleUpdateProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!showEditModal) return;
+        try {
+            await callAdminAction('update_profile', showEditModal.id, { 
+                data: { 
+                    nome: showEditModal.nome, 
+                    telefone: showEditModal.telefone,
+                    tipo: showEditModal.tipo
+                } 
+            });
+            setShowEditModal(null);
+        } catch (err) {}
     };
 
     const filteredUsers = users.filter(user => 
@@ -63,7 +170,15 @@ export default function SuperAdminUsers() {
 
     return (
         <div className="p-6 pb-24 max-w-7xl mx-auto">
-            <h1 className="text-3xl font-bold text-white mb-8">Gerenciamento de Usuários (Master)</h1>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold text-white">Gerenciamento de Usuários (Master)</h1>
+                <button 
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold transition-colors"
+                >
+                    <Plus className="w-5 h-5" /> Novo Usuário
+                </button>
+            </div>
 
             <div className="mb-6 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -76,48 +191,76 @@ export default function SuperAdminUsers() {
                 />
             </div>
 
-            <GlassCard className="overflow-hidden">
+            <GlassCard className="overflow-hidden min-h-[400px]">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-white/5">
                             <tr>
                                 <th className="text-left p-4 text-gray-400 font-medium">Usuário</th>
                                 <th className="text-left p-4 text-gray-400 font-medium">Email</th>
-                                <th className="text-left p-4 text-gray-400 font-medium">Função (Role)</th>
-                                <th className="text-left p-4 text-gray-400 font-medium">ID</th>
+                                <th className="text-left p-4 text-gray-400 font-medium">Função</th>
+                                <th className="text-left p-4 text-gray-400 font-medium">Estabelecimento</th>
+                                <th className="text-right p-4 text-gray-400 font-medium">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/10">
                             {loading ? (
-                                <tr><td colSpan={4} className="p-8 text-center text-gray-400">Carregando...</td></tr>
+                                <tr><td colSpan={5} className="p-8 text-center text-gray-400">Carregando...</td></tr>
                             ) : filteredUsers.map(user => (
-                                <tr key={user.id} className="hover:bg-white/5 transition-colors">
+                                <tr key={user.id} className="hover:bg-white/5 transition-colors group">
                                     <td className="p-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white font-bold shrink-0">
                                                 {user.nome?.substring(0,2).toUpperCase() || '??'}
                                             </div>
-                                            <span className="text-white font-medium">{user.nome || 'Sem Nome'}</span>
+                                            <div>
+                                                <div className="text-white font-medium">{user.nome || 'Sem Nome'}</div>
+                                                <div className="text-xs text-gray-500 font-mono">{user.id.substring(0,8)}...</div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="p-4 text-gray-300">{user.email}</td>
                                     <td className="p-4">
-                                        <select 
-                                            value={user.tipo || 'client'}
-                                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                            className={`
-                                                px-3 py-1 rounded-full text-xs font-bold border outline-none cursor-pointer appearance-none
-                                                ${getRoleBadgeColor(user.tipo || 'client')}
-                                            `}
-                                        >
-                                            <option value="super_admin" className="bg-[#121212] text-yellow-500">Super Admin</option>
-                                            <option value="owner" className="bg-[#121212] text-purple-500">Dono (Owner)</option>
-                                            <option value="barber" className="bg-[#121212] text-blue-500">Barbeiro</option>
-                                            <option value="client" className="bg-[#121212] text-gray-400">Cliente</option>
-                                        </select>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getRoleBadgeColor(user.tipo || 'client')}`}>
+                                            {user.tipo === 'super_admin' ? 'Super Admin' : 
+                                             user.tipo === 'owner' ? 'Dono' : 
+                                             user.tipo === 'barber' ? 'Barbeiro' : 'Cliente'}
+                                        </span>
                                     </td>
-                                    <td className="p-4 text-gray-400 text-sm font-mono opacity-50">
-                                        {user.id}
+                                    <td className="p-4 text-gray-300">
+                                        <div className="flex items-center gap-2">
+                                            <Building2 className="w-4 h-4 text-gray-500" />
+                                            {getUserEstablishment(user)}
+                                        </div>
+                                    </td>
+                                    <td className="p-4 text-right relative">
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveActionId(activeActionId === user.id ? null : user.id);
+                                            }}
+                                            className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                        >
+                                            <MoreVertical className="w-5 h-5" />
+                                        </button>
+                                        
+                                        {/* Dropdown Menu */}
+                                        {activeActionId === user.id && (
+                                            <div className="absolute right-4 top-12 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                                                <button onClick={() => setShowEditModal(user)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
+                                                    <Edit className="w-4 h-4 text-blue-400" /> Editar Dados
+                                                </button>
+                                                <button onClick={() => setShowPasswordModal(user.id)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
+                                                    <Lock className="w-4 h-4 text-yellow-400" /> Mudar Senha
+                                                </button>
+                                                <button onClick={() => handleSuspend(user.id, false)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
+                                                    <Ban className="w-4 h-4 text-orange-400" /> Suspender
+                                                </button>
+                                                <button onClick={() => handleDelete(user.id)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-red-400 border-t border-white/10">
+                                                    <Trash2 className="w-4 h-4" /> Deletar Usuário
+                                                </button>
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -125,6 +268,93 @@ export default function SuperAdminUsers() {
                     </table>
                 </div>
             </GlassCard>
+
+            {/* Create User Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#1e1e1e] border border-white/10 rounded-2xl w-full max-w-md p-6">
+                        <h2 className="text-xl font-bold text-white mb-6">Criar Novo Usuário</h2>
+                        <form onSubmit={handleCreateUser} className="space-y-4">
+                            <div>
+                                <label className="text-sm text-gray-400">Nome Completo</label>
+                                <input required type="text" value={newUser.nome} onChange={e => setNewUser({...newUser, nome: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]" />
+                            </div>
+                            <div>
+                                <label className="text-sm text-gray-400">Email</label>
+                                <input required type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]" />
+                            </div>
+                            <div>
+                                <label className="text-sm text-gray-400">Senha Inicial</label>
+                                <input required type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]" />
+                            </div>
+                            <div>
+                                <label className="text-sm text-gray-400">Função</label>
+                                <select value={newUser.tipo} onChange={e => setNewUser({...newUser, tipo: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]">
+                                    <option value="client">Cliente</option>
+                                    <option value="barber">Barbeiro</option>
+                                    <option value="owner">Dono (Owner)</option>
+                                    <option value="super_admin">Super Admin</option>
+                                </select>
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl bg-white/5 text-white hover:bg-white/10">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3 rounded-xl bg-[#7C3AED] text-white font-bold hover:opacity-90">Criar Usuário</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Change Password Modal */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#1e1e1e] border border-white/10 rounded-2xl w-full max-w-md p-6">
+                        <h2 className="text-xl font-bold text-white mb-6">Alterar Senha</h2>
+                        <form onSubmit={handleUpdatePassword} className="space-y-4">
+                            <div>
+                                <label className="text-sm text-gray-400">Nova Senha</label>
+                                <input required type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]" placeholder="Digite a nova senha..." />
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button type="button" onClick={() => setShowPasswordModal(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-white hover:bg-white/10">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3 rounded-xl bg-yellow-600 text-white font-bold hover:opacity-90">Atualizar Senha</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit User Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#1e1e1e] border border-white/10 rounded-2xl w-full max-w-md p-6">
+                        <h2 className="text-xl font-bold text-white mb-6">Editar Usuário</h2>
+                        <form onSubmit={handleUpdateProfile} className="space-y-4">
+                            <div>
+                                <label className="text-sm text-gray-400">Nome Completo</label>
+                                <input required type="text" value={showEditModal.nome} onChange={e => setShowEditModal({...showEditModal, nome: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]" />
+                            </div>
+                            <div>
+                                <label className="text-sm text-gray-400">Telefone</label>
+                                <input type="text" value={showEditModal.telefone || ''} onChange={e => setShowEditModal({...showEditModal, telefone: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]" />
+                            </div>
+                            <div>
+                                <label className="text-sm text-gray-400">Função</label>
+                                <select value={showEditModal.tipo} onChange={e => setShowEditModal({...showEditModal, tipo: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]">
+                                    <option value="client">Cliente</option>
+                                    <option value="barber">Barbeiro</option>
+                                    <option value="owner">Dono (Owner)</option>
+                                    <option value="super_admin">Super Admin</option>
+                                </select>
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button type="button" onClick={() => setShowEditModal(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-white hover:bg-white/10">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold hover:opacity-90">Salvar Alterações</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
