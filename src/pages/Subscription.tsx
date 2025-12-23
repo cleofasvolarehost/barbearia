@@ -40,7 +40,7 @@ export default function Subscription() {
     setPaymentStep('payment');
   };
 
-  const handleBrickSuccess = async (token: string, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
+  const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
     setLoading(true);
     try {
         if (!establishment || !selectedPlanId || !user?.email) return;
@@ -55,6 +55,7 @@ export default function Subscription() {
             body: JSON.stringify({
                 token,
                 payer_email: user.email,
+                establishment_id: establishment?.id,
                 plan_id: selectedPlanId, // Changed from plan_type to plan_id
                 issuer_id,
                 payment_method_id,

@@ -10,7 +10,7 @@ interface MercadoPagoBrickProps {
   amount: number;
   email: string;
   publicKey?: string;
-  onSuccess: (token: string, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => void;
+  onSuccess: (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => void;
   onError: (error: any) => void;
 }
 
@@ -100,15 +100,15 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
             },
             customization: {
                 paymentMethods: {
-                    minInstallments: 1,
-                    maxInstallments: 12,
-                    types: {
-                        excluded: [] // Ensure nothing is excluded
-                    }
+                    creditCard: 'all',
+                    debitCard: 'all',
+                    ticket: 'all',
+                    bankTransfer: 'all',
+                    maxInstallments: 1
                 },
                 visual: {
                     style: {
-                        theme: 'dark'
+                        theme: 'dark' // Matches our dark UI
                     }
                 }
             },
@@ -121,7 +121,9 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
                     // formData contains token, issuer_id, payment_method_id, etc.
                     return new Promise<void>((resolve, reject) => {
                         console.log('Brick Submit:', formData);
-                        if (formData.token) {
+                        // Allow submission if we have a token OR if it's a non-card method (Pix/Ticket)
+                        // For Pix/Ticket, token is undefined, but payment_method_id is present.
+                        if (formData.token || formData.payment_method_id) {
                             onSuccess(
                                 formData.token, 
                                 formData.issuer_id, 
@@ -131,7 +133,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
                             );
                             resolve();
                         } else {
-                            onError('Erro ao gerar token do cartão');
+                            onError('Erro ao processar dados do pagamento');
                             reject();
                         }
                     });
