@@ -104,7 +104,7 @@ export default function Settings() {
               <Palette className="w-5 h-5 text-[#7C3AED]" /> Cores da Marca
             </h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Cor Primária</label>
                 <div className="flex gap-2">
@@ -112,13 +112,13 @@ export default function Settings() {
                     type="color" 
                     value={theme.primary_color}
                     onChange={e => setTheme({...theme, primary_color: e.target.value})}
-                    className="h-10 w-10 rounded cursor-pointer bg-transparent border-0"
+                    className="h-10 w-10 rounded cursor-pointer bg-transparent border-0 flex-shrink-0"
                   />
                   <input 
                     type="text"
                     value={theme.primary_color}
                     onChange={e => setTheme({...theme, primary_color: e.target.value})}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 text-white uppercase text-sm"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 text-white uppercase text-sm min-w-0"
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Botões e destaques</p>
@@ -131,13 +131,13 @@ export default function Settings() {
                     type="color" 
                     value={theme.secondary_color}
                     onChange={e => setTheme({...theme, secondary_color: e.target.value})}
-                    className="h-10 w-10 rounded cursor-pointer bg-transparent border-0"
+                    className="h-10 w-10 rounded cursor-pointer bg-transparent border-0 flex-shrink-0"
                   />
                   <input 
                     type="text"
                     value={theme.secondary_color}
                     onChange={e => setTheme({...theme, secondary_color: e.target.value})}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 text-white uppercase text-sm"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 text-white uppercase text-sm min-w-0"
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Detalhes e preços</p>
