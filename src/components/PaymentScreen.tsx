@@ -57,7 +57,7 @@ export function PaymentScreen({
     return (
       <div className="min-h-[60vh] bg-[#050505] text-white flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-gradient-to-b from-[#050505] to-transparent pb-4">
+        <div className="sticky top-0 z-10 bg-[#050505]/95 backdrop-blur-md pb-4 border-b border-white/5 shadow-xl">
           <div className="px-4 pt-6">
             <button
               onClick={onBack}
@@ -72,33 +72,34 @@ export function PaymentScreen({
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', damping: 15 }}
-                className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#32BCAD] to-[#2DD4BF] flex items-center justify-center shadow-[0_0_30px_rgba(45,212,191,0.5)]"
+                className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-[#32BCAD] to-[#2DD4BF] flex items-center justify-center shadow-[0_0_20px_rgba(45,212,191,0.4)]"
               >
-                <svg className="w-10 h-10 text-white" viewBox="0 0 512 512" fill="currentColor">
+                <svg className="w-6 h-6 text-white" viewBox="0 0 512 512" fill="currentColor">
                   <path d="M242.4 292.5C247.8 287.1 257.1 287.1 262.5 292.5L339.5 369.5C353.7 383.7 353.7 407.2 339.5 421.4C325.3 435.6 301.8 435.6 287.6 421.4L210.6 344.4C205.2 339 205.2 329.7 210.6 324.3L242.4 292.5ZM262.5 219.5C257.1 224.9 247.8 224.9 242.4 219.5L165.4 142.5C151.2 128.3 151.2 104.8 165.4 90.6C179.6 76.4 203.1 76.4 217.3 90.6L294.3 167.6C299.7 173 299.7 182.3 294.3 187.7L262.5 219.5ZM384 262.5C378.6 257.1 378.6 247.8 384 242.4L461 165.4C475.2 151.2 498.7 151.2 512.9 165.4C527.1 179.6 527.1 203.1 512.9 217.3L435.9 294.3C430.5 299.7 421.2 299.7 415.8 294.3L384 262.5zM90.6 294.3C76.4 280.1 76.4 256.6 90.6 242.4L167.6 165.4C173 160 182.3 160 187.7 165.4L219.5 197.2C224.9 202.6 224.9 211.9 219.5 217.3L142.5 294.3C128.3 308.5 104.8 308.5 90.6 294.3z" />
                 </svg>
               </motion.div>
 
-              <h1 className="text-3xl font-black mb-2">Pix Automático</h1>
-              <p className="text-sm text-gray-400">Escaneie o QR Code ou copie o código</p>
-
-              {/* Timer */}
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-orange-500/10 border border-orange-500/30"
-              >
-                <Timer className="w-4 h-4 text-orange-400" />
-                <span className="text-sm font-bold text-orange-400">
-                  Expira em: {formatTime(timeLeft)}
-                </span>
-              </motion.div>
+              <div className="flex flex-col items-center gap-1">
+                 <h1 className="text-xl font-black text-white">Pix Automático</h1>
+                 <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30"
+                  >
+                    <Timer className="w-3 h-3 text-orange-400" />
+                    <span className="text-xs font-bold text-orange-400">
+                      Expira em: {formatTime(timeLeft)}
+                    </span>
+                  </motion.div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="px-4 pb-20 max-w-md mx-auto w-full flex-1">
+        <div className="px-4 pb-24 pt-6 max-w-md mx-auto w-full flex-1 overflow-y-auto">
+          <p className="text-xs text-center text-gray-500 mb-6">Escaneie o QR Code ou copie o código abaixo</p>
+
           {/* QR Code Container */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
