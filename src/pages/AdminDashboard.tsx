@@ -272,7 +272,7 @@ export default function AdminDashboard() {
                 )}
 
                 <button 
-                  onClick={fetchDashboardData}
+                  onClick={() => fetchDashboardData(false)}
                   className="text-sm text-gold hover:text-white font-medium transition-colors uppercase tracking-wider"
                 >
                   Atualizar
