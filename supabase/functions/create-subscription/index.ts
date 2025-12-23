@@ -22,7 +22,10 @@ serve(async (req) => {
       payment_method_id, 
       identification,
       card_holder_name,
-      installments
+      installments,
+      custom_amount,
+      type, // 'upgrade', 'renewal', 'new'
+      description
     } = await req.json()
 
     // 1. Strict Validation
@@ -69,7 +72,8 @@ serve(async (req) => {
     }
 
     // 4. Create Payment Body
-    const transactionAmount = Number(plan.price);
+    // USE CUSTOM AMOUNT IF PROVIDED (for Upgrades/Renewals)
+    const transactionAmount = custom_amount ? Number(custom_amount) : Number(plan.price);
     
     // Construct payer object
     const payer: any = {
@@ -87,20 +91,16 @@ serve(async (req) => {
          const names = card_holder_name.split(' ');
          payer.first_name = names[0];
          payer.last_name = names.slice(1).join(' ');
-    } else {
-        // Fallback or use dummy for Pix if name not strictly required by MP but recommended
-        // For Pix, often email is enough, but identification (CPF) is key.
-        // Brick usually provides identification.
     }
 
     const paymentBody: any = {
         transaction_amount: transactionAmount,
-        description: `Assinatura ${plan.name}`,
+        description: description || `Assinatura ${plan.name}`,
         payment_method_id: payment_method_id,
         payer: payer,
         installments: installments || 1, // Default to 1 if missing
         metadata: {
-            type: 'saas_subscription', // Updated from 'saas_renewal' to be more generic or specific
+            type: type || 'saas_subscription', 
             establishment_id: establishment_id,
             plan_id: plan_id,
             plan_name: plan.name
@@ -157,14 +157,18 @@ serve(async (req) => {
         console.log('Payment Approved Immediately. Updating Establishment...');
 
         // 1. Calculate Date
-        const daysToAdd = plan.days_valid || 30;
+        // Use custom days if provided (e.g. for +3 months renewal), otherwise use plan default
+        const daysToAddVal = days_to_add ? Number(days_to_add) : (plan.days_valid || 30);
+        
         let newEndDate = new Date();
         const currentEndDate = establishment?.subscription_end_date ? new Date(establishment.subscription_end_date) : null;
 
         if (currentEndDate && currentEndDate > new Date()) {
-             newEndDate = new Date(currentEndDate.getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
+             // Extend from current end date
+             newEndDate = new Date(currentEndDate.getTime() + (daysToAddVal * 24 * 60 * 60 * 1000));
         } else {
-             newEndDate = new Date(new Date().getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
+             // Start from now
+             newEndDate = new Date(new Date().getTime() + (daysToAddVal * 24 * 60 * 60 * 1000));
         }
 
         // 2. Update Establishment

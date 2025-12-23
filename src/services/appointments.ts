@@ -142,8 +142,8 @@ export const appointmentsService = {
       p_servico_id: payload.service_id,
       p_usuario_id: payload.client_id, // If null/undefined, RPC receives null
       p_preco: service?.preco || 0,
-      p_client_name: payload.client_name,
-      p_client_phone: payload.client_phone
+      p_client_name: payload.client_name || null,
+      p_client_phone: payload.client_phone || null
     });
 
     if (error) throw error;

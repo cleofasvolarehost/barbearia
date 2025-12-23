@@ -31,7 +31,9 @@ export const bookingsApi = {
         p_barbeiro_id: params.barberId,
         p_servico_id: params.serviceId,
         p_usuario_id: params.userId,
-        p_preco: params.price
+        p_preco: params.price,
+        p_client_name: params.clientName || null,
+        p_client_phone: params.clientPhone || null
       });
 
       if (error) throw error;

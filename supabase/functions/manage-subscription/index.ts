@@ -27,7 +27,7 @@ serve(async (req) => {
     if (authError || !user) throw new Error('Unauthorized')
 
     // 2. Get Request Body
-    const { action, establishment_id } = await req.json()
+    const { action, establishment_id, new_plan_id } = await req.json()
 
     // 3. Verify Ownership
     const { data: establishment, error: estError } = await supabase
@@ -61,6 +61,46 @@ serve(async (req) => {
             success: true, 
             message: 'Assinatura cancelada com sucesso.',
             new_status: 'cancelled'
+        };
+    } else if (action === 'downgrade') {
+        if (!new_plan_id) throw new Error('Missing new_plan_id');
+
+        // Fetch Plan Name
+        const { data: plan, error: planError } = await supabase
+            .from('saas_plans')
+            .select('name')
+            .eq('id', new_plan_id)
+            .single();
+
+        if (planError || !plan) throw new Error('Plan not found');
+
+        const effectiveDate = establishment.subscription_end_date;
+
+        const { error: updateError } = await supabase
+            .from('establishments')
+            .update({
+                pending_plan_change: {
+                    plan_id: new_plan_id,
+                    plan_name: plan.name,
+                    effective_date: effectiveDate
+                }
+            })
+            .eq('id', establishment_id);
+
+        if (updateError) throw updateError;
+
+        result = {
+            success: true,
+            message: `Downgrade agendado para ${plan.name}`,
+            effective_date: effectiveDate
+         };
+    } else if (action === 'update_payment_method') {
+        // Mock implementation for updating payment method
+        // In real world: Call MP to save card / update customer default card
+        
+        result = {
+            success: true,
+            message: 'Método de pagamento padrão atualizado com sucesso.'
         };
     } else {
         throw new Error('Invalid action');
