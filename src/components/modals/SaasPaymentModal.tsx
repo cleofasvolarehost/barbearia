@@ -87,23 +87,29 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
             throw new Error(data.error || 'Erro ao processar assinatura');
         }
 
+        // Normalize Data (Handle both formatted response and raw MP response)
+        const qrCode = data.qr_code || data.point_of_interaction?.transaction_data?.qr_code;
+        const qrCodeBase64 = data.qr_code_base64 || data.point_of_interaction?.transaction_data?.qr_code_base64;
+        const ticketUrl = data.ticket_url || data.point_of_interaction?.transaction_data?.ticket_url;
+        const status = data.status;
+
         // Handle PIX Response
-        if (data.qr_code && data.qr_code_base64) {
+        if (qrCode && qrCodeBase64) {
             setPixData({
-                qr_code: data.qr_code,
-                qr_code_base64: data.qr_code_base64,
-                ticket_url: data.ticket_url
+                qr_code: qrCode,
+                qr_code_base64: qrCodeBase64,
+                ticket_url: ticketUrl
             });
             toast.success('PIX gerado com sucesso!');
             return; // Stay in modal to show QR
         }
 
         // Handle Card/Approved Response
-        if (data.status === 'approved') {
+        if (status === 'approved') {
             toast.success(`Assinatura iniciada com sucesso!`);
             onSuccess();
             onClose();
-        } else if (payment_method_id === 'pix' && data.status === 'pending') {
+        } else if (payment_method_id === 'pix' && status === 'pending') {
              // PIX Pending but no QR Code?
              console.warn('PIX Pending but missing QR Code data', data);
              toast.error('Erro ao gerar QR Code. Verifique o console ou tente novamente.');
