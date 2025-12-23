@@ -52,7 +52,7 @@ export default function AdminServices() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!establishment) return;
+    if (!establishment || !user) return;
 
     try {
       const payload = {
@@ -103,12 +103,12 @@ export default function AdminServices() {
   };
 
   const handleAutoFill = async () => {
-    if (!establishment) return;
+    if (!establishment || !user) return;
     const standardServices = [
-      { establishment_id: establishment.id, nome: 'Corte Masculino', preco: 40, duracao_minutos: 30, categoria: 'Cabelo', descricao: 'Corte tradicional ou degradê.' },
-      { establishment_id: establishment.id, nome: 'Barba', preco: 30, duracao_minutos: 20, categoria: 'Barba', descricao: 'Barba modelada com toalha quente.' },
-      { establishment_id: establishment.id, nome: 'Combo (Corte + Barba)', preco: 60, duracao_minutos: 50, categoria: 'Combo', descricao: 'Serviço completo.' },
-      { establishment_id: establishment.id, nome: 'Sobrancelha', preco: 15, duracao_minutos: 10, categoria: 'Acabamento', descricao: 'Design de sobrancelha.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Corte Masculino', preco: 40, duracao_minutos: 30, categoria: 'Cabelo', descricao: 'Corte tradicional ou degradê.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Barba', preco: 30, duracao_minutos: 20, categoria: 'Barba', descricao: 'Barba modelada com toalha quente.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Combo (Corte + Barba)', preco: 60, duracao_minutos: 50, categoria: 'Combo', descricao: 'Serviço completo.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Sobrancelha', preco: 15, duracao_minutos: 10, categoria: 'Acabamento', descricao: 'Design de sobrancelha.' },
     ];
 
     try {
