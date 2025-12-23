@@ -29,7 +29,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
   const [copied, setCopied] = useState(false);
   
   // Custom UI State
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(null);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('pix');
   const [showSuccess, setShowSuccess] = useState(false);
 
   // Reset state when modal opens/closes
@@ -37,7 +37,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
     if (!isOpen) {
         setPixData(null);
         setLoading(false);
-        setSelectedMethod(null);
+        setSelectedMethod('pix');
         setShowSuccess(false);
     }
   }, [isOpen]);
@@ -138,14 +138,6 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
 
   const paymentMethodsList = [
     {
-      id: 'credit' as PaymentMethod,
-      icon: <CreditCard className="w-7 h-7" />,
-      title: 'Cartão de Crédito',
-      subtitle: 'Aprovação imediata',
-      badge: 'Recomendado',
-      color: 'from-[#7C3AED] to-[#A855F7]',
-    },
-    {
       id: 'pix' as PaymentMethod,
       icon: (
         <svg className="w-7 h-7" viewBox="0 0 512 512" fill="currentColor">
@@ -156,6 +148,14 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
       subtitle: 'Pagamento instantâneo',
       badge: 'Mais Rápido',
       color: 'from-[#10B981] to-[#14B8A6]',
+    },
+    {
+      id: 'credit' as PaymentMethod,
+      icon: <CreditCard className="w-7 h-7" />,
+      title: 'Cartão de Crédito',
+      subtitle: 'Aprovação imediata',
+      badge: 'Recomendado',
+      color: 'from-[#7C3AED] to-[#A855F7]',
     },
     {
       id: 'boleto' as PaymentMethod,
@@ -308,66 +308,88 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                             )}
 
                             {/* Payment Method Selection */}
-                            {!selectedMethod ? (
-                                <div className="px-6 flex-1">
-                                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">
-                                        Escolha a forma de pagamento
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {paymentMethodsList.map((method, index) => (
-                                            <motion.button
-                                                key={method.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.3 + index * 0.1 }}
-                                                onClick={() => setSelectedMethod(method.id)}
-                                                className="w-full min-h-[80px] p-5 rounded-2xl border-2 border-white/10 hover:border-white/20 transition-all relative overflow-hidden group bg-white/5 hover:bg-white/10"
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/10 text-gray-400 group-hover:text-white transition-colors`}>
-                                                        {method.icon}
-                                                    </div>
-                                                    <div className="flex-1 text-left">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <h4 className="font-bold text-white">{method.title}</h4>
-                                                            {method.badge && (
-                                                                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30">
-                                                                    {method.badge}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-sm text-gray-400">{method.subtitle}</p>
-                                                    </div>
-                                                </div>
-                                            </motion.button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
-                                // Render Brick based on selection
-                                <div className="px-6 pb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    <MercadoPagoBrick 
-                                        amount={Number(plan.price)} 
-                                        email={user?.email || ''}
-                                        onSuccess={handleBrickSuccess}
-                                        onError={handleBrickError}
-                                        customization={{
-                                            paymentMethods: {
-                                                creditCard: selectedMethod === 'credit' ? 'all' : [],
-                                                debitCard: selectedMethod === 'credit' ? 'all' : [],
-                                                ticket: selectedMethod === 'boleto' ? 'all' : [],
-                                                bankTransfer: selectedMethod === 'pix' ? 'all' : [],
-                                                maxInstallments: 1
-                                            },
-                                            visual: {
-                                                style: {
-                                                    theme: 'dark'
+                            <div className="px-6 flex-1">
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">
+                                    Escolha a forma de pagamento
+                                </h3>
+                                <div className="space-y-3">
+                                    {paymentMethodsList.map((method, index) => (
+                                        <motion.button
+                                            key={method.id}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.3 + index * 0.1 }}
+                                            onClick={() => setSelectedMethod(method.id)}
+                                            className={`
+                                                w-full min-h-[80px] p-5 rounded-2xl transition-all relative overflow-hidden group
+                                                ${selectedMethod === method.id 
+                                                    ? 'border-2 border-[#10B981] bg-white/10' 
+                                                    : 'border-2 border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
                                                 }
-                                            }
-                                        }}
-                                    />
+                                            `}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`
+                                                    w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
+                                                    ${selectedMethod === method.id 
+                                                        ? 'bg-[#10B981] text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
+                                                        : 'bg-white/10 text-gray-400 group-hover:text-white'
+                                                    }
+                                                `}>
+                                                    {method.icon}
+                                                </div>
+                                                <div className="flex-1 text-left">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h4 className="font-bold text-white">{method.title}</h4>
+                                                        {method.badge && (
+                                                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30">
+                                                                {method.badge}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm text-gray-400">{method.subtitle}</p>
+                                                </div>
+                                                {selectedMethod === method.id && (
+                                                    <div className="w-6 h-6 rounded-full bg-[#10B981] flex items-center justify-center">
+                                                        <Check className="w-4 h-4 text-white" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.button>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
+
+                            {/* Render Brick based on selection */}
+                            <div className="px-6 pb-6 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                {selectedMethod && (
+                                <MercadoPagoBrick 
+                                    amount={Number(plan.price)} 
+                                    email={user?.email || ''}
+                                    onSuccess={handleBrickSuccess}
+                                    onError={handleBrickError}
+                                    customization={{
+                                        paymentMethods: {
+                                            creditCard: selectedMethod === 'credit' ? 'all' : [],
+                                            debitCard: selectedMethod === 'credit' ? 'all' : [],
+                                            ticket: selectedMethod === 'boleto' ? 'all' : [],
+                                            bankTransfer: selectedMethod === 'pix' ? 'all' : [],
+                                            maxInstallments: 1
+                                        },
+                                        visual: {
+                                            style: {
+                                                theme: 'dark',
+                                                customVariables: {
+                                                    formPadding: '0px',
+                                                    baseColor: '#10B981'
+                                                }
+                                            },
+                                            hidePaymentButton: false // Always show MP button, let it handle the flow
+                                        }
+                                    }}
+                                />
+                                )}
+                            </div>
                         </>
                     )}
                 </div>
