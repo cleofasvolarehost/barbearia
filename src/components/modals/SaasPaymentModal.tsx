@@ -134,7 +134,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 <X className="w-8 h-8" />
             </button>
 
-            <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative min-h-[400px] flex flex-col justify-center">
+            <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-2xl relative flex flex-col max-h-[85vh] w-full">
                 
                 {/* Back / Change Plan Button (Only if not in PIX mode) */}
                 {!pixData && (
@@ -149,8 +149,9 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                     </div>
                 )}
 
-                <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold mb-2">
+                {/* Header Section - Fixed */}
+                <div className="p-6 md:p-8 pb-0 text-center shrink-0">
+                    <h2 className="text-2xl font-bold mb-2 text-white">
                         {pixData ? 'Pagamento via PIX' : 'Finalizar Assinatura'}
                     </h2>
                     <p className="text-gray-400">
@@ -158,76 +159,86 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                     </p>
                 </div>
 
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                        <Loader2 className="w-12 h-12 text-[#7C3AED] animate-spin" />
-                        <p className="text-gray-400 animate-pulse">Processando pagamento...</p>
-                    </div>
-                ) : pixData ? (
-                    // PIX View
-                    <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-                        <div className="flex justify-center">
-                            <div className="bg-white p-4 rounded-xl shadow-lg shadow-[#7C3AED]/20">
-                                <img 
-                                    src={`data:image/png;base64,${pixData.qr_code_base64}`} 
-                                    alt="QR Code Pix" 
-                                    className="w-48 h-48 object-contain"
-                                />
+                {/* Scrollable Content Section */}
+                <div className="p-6 md:p-8 pt-6 overflow-y-auto custom-scrollbar flex-1">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                            <Loader2 className="w-12 h-12 text-[#7C3AED] animate-spin" />
+                            <p className="text-gray-400 animate-pulse">Processando pagamento...</p>
+                        </div>
+                    ) : pixData ? (
+                        // PIX View
+                        <div className="space-y-6 animate-in fade-in zoom-in duration-300">
+                            <div className="flex justify-center">
+                                <div className="bg-white p-4 rounded-xl shadow-lg shadow-[#7C3AED]/20">
+                                    <img 
+                                        src={`data:image/png;base64,${pixData.qr_code_base64}`} 
+                                        alt="QR Code Pix" 
+                                        className="w-48 h-48 object-contain"
+                                    />
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="space-y-3">
-                            <p className="text-sm text-center text-gray-400">
-                                Escaneie o QR Code ou copie o código abaixo:
-                            </p>
-                            <div className="relative group">
-                                <textarea
-                                    readOnly
-                                    value={pixData.qr_code}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 pr-12 text-xs text-gray-400 font-mono resize-none focus:border-[#7C3AED] outline-none h-24 transition-colors"
-                                />
-                                <button
-                                    onClick={handleCopyPix}
-                                    className="absolute top-2 right-2 p-2 bg-[#7C3AED]/10 hover:bg-[#7C3AED] text-[#7C3AED] hover:text-white rounded-lg transition-all"
-                                    title="Copiar código"
-                                >
-                                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                                </button>
+                            <div className="space-y-3">
+                                <p className="text-sm text-center text-gray-400">
+                                    Escaneie o QR Code ou copie o código abaixo:
+                                </p>
+                                <div className="relative group">
+                                    <textarea
+                                        readOnly
+                                        value={pixData.qr_code}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-4 pr-12 text-xs text-gray-400 font-mono resize-none focus:border-[#7C3AED] outline-none h-24 transition-colors"
+                                    />
+                                    <button
+                                        onClick={handleCopyPix}
+                                        className="absolute top-2 right-2 p-2 bg-[#7C3AED]/10 hover:bg-[#7C3AED] text-[#7C3AED] hover:text-white rounded-lg transition-all"
+                                        title="Copiar código"
+                                    >
+                                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
-                            <p className="text-yellow-400 text-sm font-bold flex items-center justify-center gap-2">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Aguardando pagamento...
-                            </p>
-                            <p className="text-xs text-yellow-200/60 mt-1">
-                                A confirmação será automática em alguns instantes.
-                            </p>
+                            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+                                <p className="text-yellow-400 text-sm font-bold flex items-center justify-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Aguardando pagamento...
+                                </p>
+                                <p className="text-xs text-yellow-200/60 mt-1">
+                                    A confirmação será automática em alguns instantes.
+                                </p>
+                            </div>
+                            
+                            <button
+                                onClick={onClose}
+                                className="w-full bg-white/5 hover:bg-white/10 text-white font-medium py-3 rounded-xl transition-colors"
+                            >
+                                Fechar e Aguardar
+                            </button>
                         </div>
-                        
-                        <button
-                            onClick={onClose}
-                            className="w-full bg-white/5 hover:bg-white/10 text-white font-medium py-3 rounded-xl transition-colors"
-                        >
-                            Fechar e Aguardar
-                        </button>
-                    </div>
-                ) : (
-                    // Brick View
-                    <>
-                        <MercadoPagoBrick 
-                            amount={Number(plan.price)} 
-                            email={user?.email || ''}
-                            onSuccess={handleBrickSuccess}
-                            onError={handleBrickError}
-                        />
-                        <p className="text-xs text-center text-gray-500 mt-6">
-                            Ambiente Seguro Mercado Pago. Seus dados são criptografados.
-                        </p>
-                    </>
-                )}
+                    ) : (
+                        // Brick View
+                        <>
+                            <MercadoPagoBrick 
+                                amount={Number(plan.price)} 
+                                email={user?.email || ''}
+                                onSuccess={handleBrickSuccess}
+                                onError={handleBrickError}
+                            />
+                            <p className="text-xs text-center text-gray-500 mt-6 pb-2">
+                                Ambiente Seguro Mercado Pago. Seus dados são criptografados.
+                            </p>
+                        </>
+                    )}
+                </div>
             </div>
+            
+            <style>{`
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(124, 58, 237, 0.5); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(124, 58, 237, 0.7); }
+            `}</style>
         </div>
     </div>
   );

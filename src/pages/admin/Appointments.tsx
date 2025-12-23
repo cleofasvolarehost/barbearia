@@ -32,7 +32,7 @@ export default function AdminAppointmentsPage() {
   });
   const [totalCount, setTotalCount] = useState(0);
 
-  const [dateFilterMode, setDateFilterMode] = useState<'today' | 'tomorrow' | 'week'>('today');
+  const [dateFilterMode, setDateFilterMode] = useState<'today' | 'tomorrow' | 'week' | 'all'>('today');
 
   useEffect(() => {
     if (establishment?.id) {
@@ -53,10 +53,19 @@ export default function AdminAppointmentsPage() {
     }
   };
 
-  const handleDateFilterChange = (mode: 'today' | 'tomorrow' | 'week') => {
+  const handleDateFilterChange = (mode: 'today' | 'tomorrow' | 'week' | 'all') => {
     setDateFilterMode(mode);
     const now = new Date();
     let start, end;
+
+    if (mode === 'all') {
+        setFilters(prev => ({
+            ...prev,
+            dateRange: undefined, // Remove date filter
+            page: 1
+        }));
+        return;
+    }
 
     switch (mode) {
       case 'today':
@@ -73,11 +82,13 @@ export default function AdminAppointmentsPage() {
         break;
     }
 
-    setFilters(prev => ({
-      ...prev,
-      dateRange: { start: start.toISOString(), end: end.toISOString() },
-      page: 1 // reset page
-    }));
+    if (start && end) {
+        setFilters(prev => ({
+        ...prev,
+        dateRange: { start: start.toISOString(), end: end.toISOString() },
+        page: 1 // reset page
+        }));
+    }
   };
 
   const handleStatusFilterChange = (status: string) => {
@@ -101,152 +112,160 @@ export default function AdminAppointmentsPage() {
     setIsDetailsModalOpen(true);
   };
 
-  if (!establishment) return <div className="p-8">Carregando estabelecimento...</div>;
+  if (!establishment) return <div className="min-h-screen bg-[#121212] flex items-center justify-center text-white">Carregando estabelecimento...</div>;
 
   const totalPages = Math.ceil(totalCount / (filters.limit || 10));
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Agendamentos</h1>
-          <p className="text-gray-500">Gerencie a agenda da sua barbearia</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <ListIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setViewMode('calendar')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'calendar' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <CalendarIcon className="h-5 w-5" />
-            </button>
+    <div className="min-h-screen bg-[#121212] text-white p-6 pb-24">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white uppercase tracking-tight border-l-4 border-[#7C3AED] pl-4">Agendamentos</h1>
+            <p className="text-gray-400 mt-1 ml-5">Gerencie todos os agendamentos da barbearia</p>
           </div>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            Novo Agendamento
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-          <button
-            onClick={() => handleDateFilterChange('today')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap ${dateFilterMode === 'today' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            Hoje
-          </button>
-          <button
-            onClick={() => handleDateFilterChange('tomorrow')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap ${dateFilterMode === 'tomorrow' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            Amanhã
-          </button>
-          <button
-            onClick={() => handleDateFilterChange('week')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap ${dateFilterMode === 'week' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            Esta Semana
-          </button>
-        </div>
-
-        <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
-
-        <div className="flex items-center gap-4 flex-1 w-full">
-          <select
-            onChange={(e) => handleStatusFilterChange(e.target.value)}
-            className="block w-full md:w-40 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          >
-            <option value="all">Todos Status</option>
-            <option value="scheduled">Agendado</option>
-            <option value="confirmed">Confirmado</option>
-            <option value="completed">Concluído</option>
-            <option value="cancelled">Cancelado</option>
-            <option value="no_show">Não Compareceu</option>
-          </select>
-
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center gap-3">
+            <div className="flex bg-white/5 rounded-lg p-1 border border-white/10">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-[#7C3AED] text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <ListIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-[#7C3AED] text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <CalendarIcon className="h-5 w-5" />
+              </button>
             </div>
-            <input
-              type="text"
-              placeholder="Buscar cliente..."
-              onChange={handleSearchChange}
-              className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-2 px-6 py-2.5 bg-[#7C3AED] text-white rounded-xl hover:bg-[#6D28D9] transition-all font-bold shadow-lg shadow-[#7C3AED]/20"
+            >
+              <Plus className="h-5 w-5" />
+              Novo Agendamento
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      {viewMode === 'list' ? (
-        <>
-          <AppointmentsTable
-            appointments={appointments}
-            loading={loading}
-            onEdit={handleViewAppointment}
-            onCancel={handleViewAppointment}
-            onView={handleViewAppointment}
-          />
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 border-t pt-4">
-              <p className="text-sm text-gray-700">
-                Mostrando <span className="font-medium">{(filters.page! - 1) * (filters.limit || 10) + 1}</span> a <span className="font-medium">{Math.min(filters.page! * (filters.limit || 10), totalCount)}</span> de <span className="font-medium">{totalCount}</span> resultados
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handlePageChange(filters.page! - 1)}
-                  disabled={filters.page === 1}
-                  className="px-3 py-1 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handlePageChange(filters.page! + 1)}
-                  disabled={filters.page === totalPages}
-                  className="px-3 py-1 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+        {/* Filters */}
+        <div className="bg-[#1E1E1E] p-4 rounded-2xl border border-white/5 shadow-xl mb-8 flex flex-col md:flex-row gap-4 items-center">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto">
+             <button
+              onClick={() => handleDateFilterChange('all')}
+              className={`px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-all ${dateFilterMode === 'all' ? 'bg-[#7C3AED] text-white shadow-lg' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => handleDateFilterChange('today')}
+              className={`px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-all ${dateFilterMode === 'today' ? 'bg-[#7C3AED] text-white shadow-lg' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+            >
+              Hoje
+            </button>
+            <button
+              onClick={() => handleDateFilterChange('tomorrow')}
+              className={`px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-all ${dateFilterMode === 'tomorrow' ? 'bg-[#7C3AED] text-white shadow-lg' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+            >
+              Amanhã
+            </button>
+            <button
+              onClick={() => handleDateFilterChange('week')}
+              className={`px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-all ${dateFilterMode === 'week' ? 'bg-[#7C3AED] text-white shadow-lg' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+            >
+              Semana
+            </button>
+          </div>
+
+          <div className="h-8 w-px bg-white/10 hidden md:block"></div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 w-full">
+            <select
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
+              className="block w-full sm:w-48 rounded-xl bg-black/20 border border-white/10 text-white shadow-sm focus:border-[#7C3AED] focus:ring-[#7C3AED] sm:text-sm py-2.5 px-4"
+            >
+              <option value="all">Todos Status</option>
+              <option value="scheduled">Agendado</option>
+              <option value="confirmed">Confirmado</option>
+              <option value="completed">Concluído</option>
+              <option value="cancelled">Cancelado</option>
+              <option value="no_show">Não Compareceu</option>
+            </select>
+
+            <div className="relative flex-1 w-full">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-500" />
               </div>
+              <input
+                type="text"
+                placeholder="Buscar cliente por nome ou telefone..."
+                onChange={handleSearchChange}
+                className="block w-full pl-10 rounded-xl bg-black/20 border border-white/10 text-white placeholder-gray-500 shadow-sm focus:border-[#7C3AED] focus:ring-[#7C3AED] sm:text-sm py-2.5"
+              />
             </div>
-          )}
-        </>
-      ) : (
-        <div className="bg-white p-8 rounded-lg border border-gray-200 text-center text-gray-500">
-          <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">Visão de Calendário</h3>
-          <p className="mt-1 text-sm text-gray-500">Em breve...</p>
+          </div>
         </div>
-      )}
 
-      {/* Modals */}
-      <CreateAppointmentModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={fetchAppointments}
-        barbershopId={establishment.id}
-      />
-      
-      <AppointmentModal
-        isOpen={isDetailsModalOpen}
-        onClose={() => setIsDetailsModalOpen(false)}
-        appointment={selectedAppointment}
-        onUpdate={fetchAppointments}
-      />
+        {/* Content */}
+        {viewMode === 'list' ? (
+          <>
+            <AppointmentsTable
+              appointments={appointments}
+              loading={loading}
+              onEdit={handleViewAppointment}
+              onCancel={handleViewAppointment}
+              onView={handleViewAppointment}
+            />
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 border-t border-white/10 pt-6">
+                <p className="text-sm text-gray-400">
+                  Mostrando <span className="font-bold text-white">{(filters.page! - 1) * (filters.limit || 10) + 1}</span> a <span className="font-bold text-white">{Math.min(filters.page! * (filters.limit || 10), totalCount)}</span> de <span className="font-bold text-white">{totalCount}</span> resultados
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handlePageChange(filters.page! - 1)}
+                    disabled={filters.page === 1}
+                    className="px-4 py-2 rounded-xl border border-white/10 text-sm font-bold text-gray-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(filters.page! + 1)}
+                    disabled={filters.page === totalPages}
+                    className="px-4 py-2 rounded-xl border border-white/10 text-sm font-bold text-gray-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="bg-[#1E1E1E] p-12 rounded-2xl border border-white/5 text-center text-gray-500">
+            <CalendarIcon className="mx-auto h-16 w-16 text-[#7C3AED]/20 mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">Visão de Calendário</h3>
+            <p className="text-sm text-gray-400">Esta visualização estará disponível em breve.</p>
+          </div>
+        )}
+
+        {/* Modals */}
+        <CreateAppointmentModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={fetchAppointments}
+          barbershopId={establishment.id}
+        />
+        
+        <AppointmentModal
+          isOpen={isDetailsModalOpen}
+          onClose={() => setIsDetailsModalOpen(false)}
+          appointment={selectedAppointment}
+          onUpdate={fetchAppointments}
+        />
+      </div>
     </div>
   );
 }

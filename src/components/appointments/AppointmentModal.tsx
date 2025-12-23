@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Appointment } from '../../types/appointments';
 import { appointmentsService } from '../../services/appointments';
 import { format, parseISO } from 'date-fns';
-import { X, Calendar, Clock, User, Scissors, Check, AlertTriangle } from 'lucide-react';
+import { X, Calendar, Clock, User, Scissors, Check, AlertTriangle, Trash2 } from 'lucide-react';
 
 interface AppointmentModalProps {
   appointment: Appointment | null;
@@ -54,13 +54,13 @@ export function AppointmentModal({ appointment, isOpen, onClose, onUpdate }: App
   const endTime = parseISO(appointment.ends_at);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-[#1E1E1E] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/10 animate-in fade-in zoom-in duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-900">Detalhes do Agendamento</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="h-5 w-5" />
+        <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/[0.02]">
+          <h2 className="text-xl font-bold text-white">Detalhes do Agendamento</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X className="h-6 w-6" />
           </button>
         </div>
 
@@ -68,11 +68,11 @@ export function AppointmentModal({ appointment, isOpen, onClose, onUpdate }: App
         <div className="p-6 space-y-6">
           {/* Status Badge */}
           <div className="flex justify-center">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium
-              ${appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' : 
-                appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                appointment.status === 'completed' ? 'bg-gray-100 text-gray-800' : 
-                'bg-blue-100 text-blue-800'}`}>
+            <span className={`px-4 py-1.5 rounded-full text-sm font-bold border
+              ${appointment.status === 'confirmed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                appointment.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                appointment.status === 'completed' ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' : 
+                'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
               {appointment.status === 'scheduled' ? 'Agendado' : 
                appointment.status === 'confirmed' ? 'Confirmado' : 
                appointment.status === 'cancelled' ? 'Cancelado' : 
@@ -81,77 +81,78 @@ export function AppointmentModal({ appointment, isOpen, onClose, onUpdate }: App
           </div>
 
           {/* Info Grid */}
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
+          <div className="space-y-4 bg-black/20 p-4 rounded-xl border border-white/5">
+            <div className="flex items-start gap-4">
+              <Clock className="w-5 h-5 text-[#7C3AED] mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-bold text-white">
                   {format(startTime, 'dd/MM/yyyy')}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-400">
                   {format(startTime, 'HH:mm')} - {format(endTime, 'HH:mm')}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <User className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div className="flex items-start gap-4">
+              <User className="w-5 h-5 text-[#7C3AED] mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-bold text-white">
                   {appointment.client?.full_name || appointment.client_name || 'Cliente sem nome'}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-400">
                   {appointment.client?.phone || appointment.client_phone || '-'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <Scissors className="w-5 h-5 text-gray-400 mt-0.5" />
+            <div className="flex items-start gap-4">
+              <Scissors className="w-5 h-5 text-[#7C3AED] mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-bold text-white">
                   {appointment.service?.nome || appointment.service_name}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-400">
                   {appointment.barber?.nome || 'Barbeiro não identificado'}
                 </p>
               </div>
             </div>
 
             {appointment.cancel_reason && (
-               <div className="flex items-start gap-3 p-3 bg-red-50 rounded-md">
+               <div className="flex items-start gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg mt-2">
                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
                  <div>
-                   <p className="text-sm font-medium text-red-800">Motivo do Cancelamento</p>
-                   <p className="text-sm text-red-600">{appointment.cancel_reason}</p>
+                   <p className="text-sm font-bold text-red-400">Motivo do Cancelamento</p>
+                   <p className="text-sm text-red-300/80">{appointment.cancel_reason}</p>
                  </div>
                </div>
             )}
           </div>
 
           {/* Actions */}
-          <div className="border-t pt-4">
+          <div className="pt-2">
             {showCancelInput ? (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Motivo do cancelamento</label>
+              <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                <label className="block text-sm font-medium text-gray-300">Motivo do cancelamento</label>
                 <textarea
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                  className="w-full rounded-xl bg-black/20 border border-white/10 text-white shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm p-3 placeholder-gray-600"
                   rows={3}
                   placeholder="Ex: Cliente desistiu..."
+                  autoFocus
                 />
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setShowCancelInput(false)}
-                    className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+                    className="px-4 py-2 text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
                   >
                     Voltar
                   </button>
                   <button
                     onClick={handleCancel}
                     disabled={loading}
-                    className="px-3 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md"
+                    className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-lg shadow-red-600/20"
                   >
                     Confirmar Cancelamento
                   </button>
@@ -164,16 +165,16 @@ export function AppointmentModal({ appointment, isOpen, onClose, onUpdate }: App
                     <button
                       onClick={() => handleStatusChange('confirmed')}
                       disabled={loading}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-[#10B981] text-white rounded-xl hover:bg-[#059669] font-bold transition-all shadow-lg shadow-[#10B981]/20"
                     >
-                      <Check className="w-4 h-4" /> Confirmar
+                      <Check className="w-5 h-5" /> Confirmar
                     </button>
                     <button
                       onClick={() => setShowCancelInput(true)}
                       disabled={loading}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-md hover:bg-red-50"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-transparent border border-red-500/30 text-red-500 rounded-xl hover:bg-red-500/10 font-bold transition-all"
                     >
-                      Cancelar
+                      <Trash2 className="w-5 h-5" /> Cancelar
                     </button>
                   </>
                 )}
@@ -183,14 +184,14 @@ export function AppointmentModal({ appointment, isOpen, onClose, onUpdate }: App
                     <button
                       onClick={() => handleStatusChange('completed')}
                       disabled={loading}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-[#7C3AED] text-white rounded-xl hover:bg-[#6D28D9] font-bold transition-all shadow-lg shadow-[#7C3AED]/20"
                     >
-                      Concluir
+                      <Check className="w-5 h-5" /> Concluir
                     </button>
                     <button
                       onClick={() => handleStatusChange('no_show')}
                       disabled={loading}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 font-bold transition-all"
                     >
                       Não Compareceu
                     </button>
@@ -198,8 +199,8 @@ export function AppointmentModal({ appointment, isOpen, onClose, onUpdate }: App
                 )}
 
                 {(appointment.status === 'cancelled' || appointment.status === 'completed' || appointment.status === 'no_show') && (
-                  <p className="col-span-2 text-center text-sm text-gray-500 italic">
-                    Nenhuma ação disponível
+                  <p className="col-span-2 text-center text-sm text-gray-500 italic py-2">
+                    Nenhuma ação disponível para este status
                   </p>
                 )}
               </div>
