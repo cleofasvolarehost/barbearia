@@ -12,11 +12,17 @@ interface SaasPaymentModalProps {
   onSuccess: () => void;
 }
 
+interface PixData {
+  qr_code: string;
+  qr_code_base64: string;
+  ticket_url?: string;
+}
+
 export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPaymentModalProps) {
   const { user } = useAuth();
   const { establishment } = useEstablishment();
   const [loading, setLoading] = useState(false);
-  const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string, ticket_url?: string } | null>(null);
+  const [pixData, setPixData] = useState<PixData | null>(null);
   const [copied, setCopied] = useState(false);
 
   // Reset state when modal opens/closes
@@ -85,7 +91,8 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
         if (data.qr_code && data.qr_code_base64) {
             setPixData({
                 qr_code: data.qr_code,
-                qr_code_base64: data.qr_code_base64
+                qr_code_base64: data.qr_code_base64,
+                ticket_url: data.ticket_url
             });
             toast.success('PIX gerado com sucesso!');
             return; // Stay in modal to show QR
