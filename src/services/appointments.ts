@@ -18,7 +18,7 @@ export const appointmentsService = {
           preco_total,
           observacoes,
           created_at,
-          barbeiro:barbeiros(id, nome, foto_url),
+          barbeiro:barbeiros(id, nome, foto_url, establishment_id),
           usuario:usuarios(id, nome, telefone),
           servicos:agendamentos_servicos(servicos(id, nome, duracao_minutos, preco))
         `,
@@ -26,7 +26,9 @@ export const appointmentsService = {
       );
 
     if (filters.establishment_id) {
-      query = query.eq('establishment_id', filters.establishment_id);
+      query = query.or(
+        `establishment_id.eq.${filters.establishment_id},barbeiro.establishment_id.eq.${filters.establishment_id}`
+      );
     }
 
     if (filters.dateRange) {
@@ -273,7 +275,7 @@ const mapDatabaseAppointment = (row: any): Appointment => {
 
   return {
     id: row.id,
-    barbershop_id: row.establishment_id,
+    barbershop_id: row.establishment_id || row.barbeiro?.establishment_id || '',
     client_id: row.usuario_id,
     client_name: row.usuario?.nome,
     client_phone: row.usuario?.telefone,
