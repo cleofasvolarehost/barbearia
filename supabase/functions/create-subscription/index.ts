@@ -46,7 +46,12 @@ serve(async (req) => {
         mpAccessToken = Deno.env.get('SAAS_MP_ACCESS_TOKEN') || Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN') || '';
     }
 
-    if (!mpAccessToken) throw new Error('Server Config Error: Missing MP Access Token');
+    if (!mpAccessToken) {
+        // Log fallback attempts for debugging
+        console.error('MP Access Token not found in saas_settings or env vars');
+        console.log('saasSettings:', saasSettings);
+        throw new Error('Server Config Error: Missing MP Access Token');
+    }
 
     // Create Payment (Standard for all methods: Credit Card, Pix, Boleto)
     const paymentBody = {
