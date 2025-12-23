@@ -125,6 +125,10 @@ serve(async (req) => {
     });
 
     const data = await response.json();
+    
+    // LOG MP RESPONSE
+    console.log('MP Response Status:', response.status);
+    console.log('MP Response Data:', JSON.stringify(data));
 
     if (!response.ok) {
         console.error('MP Error:', data);
@@ -173,6 +177,8 @@ serve(async (req) => {
     // 6. Return Response
     const pointOfInteraction = data.point_of_interaction?.transaction_data;
     
+    console.log('Returning Response. QR Code present?', !!pointOfInteraction?.qr_code);
+
     return new Response(
         JSON.stringify({
             payment_id: data.id,
@@ -180,7 +186,8 @@ serve(async (req) => {
             qr_code: pointOfInteraction?.qr_code,
             qr_code_base64: pointOfInteraction?.qr_code_base64,
             ticket_url: pointOfInteraction?.ticket_url, // For boleto if needed
-            subscription_id: subData?.id
+            subscription_id: subData?.id,
+            raw_mp_data: data // Send raw data for debugging frontend if needed
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

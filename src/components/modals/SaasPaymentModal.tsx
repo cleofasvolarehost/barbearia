@@ -53,6 +53,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
         if (!establishment || !user?.email) return;
 
         console.log('Creating subscription with plan_id=', plan.id, 'price=', plan.price);
+        console.log('Method:', payment_method_id);
 
         // Call Edge Function to create subscription
         const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
@@ -74,6 +75,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
         });
 
         const data = await response.json();
+        console.log('Function Response:', data);
 
         if (!response.ok) {
             throw new Error(data.error || 'Erro ao processar assinatura');
@@ -94,10 +96,15 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
             toast.success(`Assinatura iniciada com sucesso!`);
             onSuccess();
             onClose();
+        } else if (payment_method_id === 'pix' && data.status === 'pending') {
+             // PIX Pending but no QR Code?
+             console.warn('PIX Pending but missing QR Code data', data);
+             toast.error('Erro ao gerar QR Code. Verifique o console ou tente novamente.');
+             // Do NOT close modal, let user try again or see error
         } else {
              // Pending (Card review) or other status
              toast('Pagamento em processamento.', { icon: '⏳' });
-             onSuccess(); // Optimistic? Or wait? Usually just close.
+             onSuccess(); 
              onClose();
         }
 
