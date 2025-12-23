@@ -17,6 +17,7 @@ import { TimeSelection } from '../components/booking/premium/TimeSelection';
 import { PaymentStep } from '../components/booking/premium/PaymentStep';
 import { SuccessStep } from '../components/booking/premium/SuccessStep';
 import { FastCheckoutModal, GuestData } from '../components/FastCheckoutModal';
+import { PhoneCaptureModal } from '../components/modals/PhoneCaptureModal';
 
 // Types
 type BookingStep = 'barber' | 'service' | 'datetime' | 'payment' | 'success';
@@ -45,6 +46,10 @@ export default function BookSlug() {
   const [guestData, setGuestData] = useState<GuestData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [pixCode, setPixCode] = useState<string>('');
+
+  // Phone Capture for Auth Users
+  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+  const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
 
   // 1. Fetch Shop & Services based on Slug
   useEffect(() => {
@@ -139,8 +144,27 @@ export default function BookSlug() {
     setIsProcessing(true);
     try {
         let userId = user?.id;
-        const clientPhone = user?.user_metadata?.telefone || guestData?.phone;
+        let clientPhone = user?.user_metadata?.telefone || guestData?.phone;
         const clientName = user?.user_metadata?.nome || guestData?.name;
+
+        // 1. Golden Rule: Validate Phone for Authenticated Users
+        if (user && !clientPhone) {
+            // Check DB to be sure (metadata might be stale)
+            const { data: dbUser } = await supabase
+                .from('usuarios')
+                .select('telefone')
+                .eq('id', user.id)
+                .single();
+            
+            if (dbUser?.telefone) {
+                clientPhone = dbUser.telefone;
+            } else {
+                // STOP and Ask for Phone
+                setIsProcessing(false);
+                setIsPhoneModalOpen(true);
+                return;
+            }
+        }
 
         // Guest User Logic
         if (!userId && guestData) {
@@ -197,6 +221,42 @@ export default function BookSlug() {
         toast.error(error.message || 'Erro ao agendar');
         setIsProcessing(false);
     }
+  };
+
+  const handlePhoneUpdate = async (phone: string) => {
+      if (!user) return;
+      setIsUpdatingPhone(true);
+      try {
+          // Update DB
+          const { error } = await supabase
+              .from('usuarios')
+              .update({ telefone: phone })
+              .eq('id', user.id);
+
+          if (error) throw error;
+
+          // Update Metadata (optional but good for UX consistency)
+          await supabase.auth.updateUser({
+              data: { telefone: phone }
+          });
+
+          toast.success('Telefone salvo!');
+          setIsPhoneModalOpen(false);
+          
+          // Retry booking automatically (will pass validation now)
+          // We don't know the method (pix/counter) here easily without storing it, 
+          // but usually premium flow defaults to one or the user clicks again.
+          // Better UX: Just close and let user click "Confirm" again, or store method in state.
+          // For now, let's close and let user click (safe) or we can trigger it.
+          // Actually, let's just close. The user is still on the Payment Step.
+          // They just need to click "Pagar no Local" or "Pagar Pix" again.
+          
+      } catch (error) {
+          console.error('Error updating phone:', error);
+          toast.error('Erro ao salvar telefone.');
+      } finally {
+          setIsUpdatingPhone(false);
+      }
   };
 
   const createBooking = async (userId: string, clientName?: string, clientPhone?: string) => {
@@ -330,6 +390,13 @@ export default function BookSlug() {
             branding={branding}
         />
       )}
+
+      <PhoneCaptureModal 
+        isOpen={isPhoneModalOpen}
+        onClose={() => setIsPhoneModalOpen(false)}
+        onConfirm={handlePhoneUpdate}
+        loading={isUpdatingPhone}
+      />
     </>
   );
 }
