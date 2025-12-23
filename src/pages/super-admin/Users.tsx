@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { GlassCard } from '../../components/GlassCard';
-import { Search, MoreVertical, Trash2, Lock, Ban, CheckCircle, Edit, Plus, Building2, Mail, Phone, User } from 'lucide-react';
+import { Search, MoreVertical, Trash2, Lock, Ban, Edit, Plus, Building2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function SuperAdminUsers() {
@@ -10,6 +10,7 @@ export default function SuperAdminUsers() {
     const [barbers, setBarbers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterEstablishment, setFilterEstablishment] = useState('all');
     
     // Modal States
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -17,7 +18,7 @@ export default function SuperAdminUsers() {
     const [showEditModal, setShowEditModal] = useState<any | null>(null); // user object
 
     // Form States
-    const [newUser, setNewUser] = useState({ nome: '', email: '', password: '', telefone: '', tipo: 'client' });
+    const [newUser, setNewUser] = useState({ nome: '', email: '', password: '', telefone: '', tipo: 'client', establishment_id: '' });
     const [newPassword, setNewPassword] = useState('');
     const [activeActionId, setActiveActionId] = useState<string | null>(null); // For dropdown
 
@@ -64,6 +65,13 @@ export default function SuperAdminUsers() {
     };
 
     const getUserEstablishment = (user: any) => {
+        // 1. Direct link (New method)
+        if (user.establishment_id) {
+            const est = establishments.find(e => e.id === user.establishment_id);
+            return est ? est.name : 'ID Desconhecido';
+        }
+
+        // 2. Legacy/Role-based fallback
         if (user.tipo === 'owner') {
             const est = establishments.find(e => e.owner_id === user.id);
             return est ? est.name : 'Sem Loja';
@@ -105,13 +113,6 @@ export default function SuperAdminUsers() {
     };
 
     const handleSuspend = async (userId: string, isSuspended: boolean) => {
-        // Since we don't have 'active' column in public.usuarios visible here easily without joining auth,
-        // we assume the action toggles it. Actually, the Edge Function sets ban_duration.
-        // We can track local state if we had it.
-        // For now just allow "Suspend" (Ban 100 years) or "Activate" (Ban 0).
-        const action = isSuspended ? 'activate' : 'suspend'; // Logic check needed.
-        // Simplified: We always offer "Suspend" unless we know they are suspended.
-        // Let's just ask the user.
         const shouldBan = window.confirm(`Deseja ${isSuspended ? 'ATIVAR' : 'SUSPENDER'} este usuário?`);
         if (!shouldBan) return;
         
@@ -123,7 +124,7 @@ export default function SuperAdminUsers() {
         try {
             await callAdminAction('create_user', null, newUser);
             setShowCreateModal(false);
-            setNewUser({ nome: '', email: '', password: '', telefone: '', tipo: 'client' });
+            setNewUser({ nome: '', email: '', password: '', telefone: '', tipo: 'client', establishment_id: '' });
         } catch (err) {
             // Error handled in callAdminAction
         }
@@ -147,17 +148,26 @@ export default function SuperAdminUsers() {
                 data: { 
                     nome: showEditModal.nome, 
                     telefone: showEditModal.telefone,
-                    tipo: showEditModal.tipo
+                    tipo: showEditModal.tipo,
+                    establishment_id: showEditModal.establishment_id || null
                 } 
             });
             setShowEditModal(null);
         } catch (err) {}
     };
 
-    const filteredUsers = users.filter(user => 
-        (user.nome?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    );
+    const filteredUsers = users.filter(user => {
+        const matchesSearch = (user.nome?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                              (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+        
+        const matchesEst = filterEstablishment === 'all' || 
+                           user.establishment_id === filterEstablishment ||
+                           // Fallback logic
+                           (user.tipo === 'owner' && establishments.find(e => e.owner_id === user.id)?.id === filterEstablishment) ||
+                           (user.tipo === 'barber' && barbers.find(b => b.user_id === user.id)?.establishment_id === filterEstablishment);
+
+        return matchesSearch && matchesEst;
+    });
 
     const getRoleBadgeColor = (role: string) => {
         switch(role) {
@@ -180,15 +190,32 @@ export default function SuperAdminUsers() {
                 </button>
             </div>
 
-            <div className="mb-6 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input 
-                    type="text" 
-                    placeholder="Buscar por nome ou email..." 
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white focus:ring-2 focus:ring-[#7C3AED] outline-none"
-                />
+            <div className="mb-6 flex gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input 
+                        type="text" 
+                        placeholder="Buscar por nome ou email..." 
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white focus:ring-2 focus:ring-[#7C3AED] outline-none"
+                    />
+                </div>
+                <div className="relative w-64">
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <select 
+                        value={filterEstablishment}
+                        onChange={e => setFilterEstablishment(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white focus:ring-2 focus:ring-[#7C3AED] outline-none appearance-none cursor-pointer"
+                    >
+                        <option value="all" className="bg-[#1e1e1e]">Todas as Barbearias</option>
+                        {establishments.map(est => (
+                            <option key={est.id} value={est.id} className="bg-[#1e1e1e]">
+                                {est.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             <GlassCard className="overflow-hidden min-h-[400px]">
@@ -296,6 +323,15 @@ export default function SuperAdminUsers() {
                                     <option value="super_admin">Super Admin</option>
                                 </select>
                             </div>
+                            <div>
+                                <label className="text-sm text-gray-400">Vincular a Barbearia (Opcional)</label>
+                                <select value={newUser.establishment_id} onChange={e => setNewUser({...newUser, establishment_id: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]">
+                                    <option value="">Nenhuma / SaaS</option>
+                                    {establishments.map(est => (
+                                        <option key={est.id} value={est.id}>{est.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <div className="flex gap-3 pt-4">
                                 <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl bg-white/5 text-white hover:bg-white/10">Cancelar</button>
                                 <button type="submit" className="flex-1 py-3 rounded-xl bg-[#7C3AED] text-white font-bold hover:opacity-90">Criar Usuário</button>
@@ -345,6 +381,15 @@ export default function SuperAdminUsers() {
                                     <option value="barber">Barbeiro</option>
                                     <option value="owner">Dono (Owner)</option>
                                     <option value="super_admin">Super Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-sm text-gray-400">Vincular a Barbearia</label>
+                                <select value={showEditModal.establishment_id || ''} onChange={e => setShowEditModal({...showEditModal, establishment_id: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-[#7C3AED]">
+                                    <option value="">Nenhuma / SaaS</option>
+                                    {establishments.map(est => (
+                                        <option key={est.id} value={est.id}>{est.name}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="flex gap-3 pt-4">

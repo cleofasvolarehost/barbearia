@@ -107,7 +107,8 @@ serve(async (req) => {
                      email: payload.email,
                      nome: payload.nome,
                      tipo: payload.tipo,
-                     telefone: payload.telefone
+                     telefone: payload.telefone,
+                     establishment_id: payload.establishment_id
                  })
                  if (insertError) {
                      // Rollback auth user creation if public insert fails
