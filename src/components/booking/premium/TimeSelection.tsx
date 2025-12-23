@@ -150,8 +150,14 @@ export function TimeSelection({ onConfirm, onBack, availableSlots, selectedDate,
         </div>
 
         {availableSlots.length === 0 ? (
-            <div className="text-center py-10 text-gray-500">
-                Nenhum horário disponível para esta data.
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-2">
+                    <Clock className="w-8 h-8 text-gray-500" />
+                </div>
+                <h3 className="text-lg font-bold text-white">Nenhum horário disponível</h3>
+                <p className="text-gray-400 text-sm max-w-xs">
+                    Não encontramos horários livres para esta data. Tente selecionar outro dia no calendário acima.
+                </p>
             </div>
         ) : (
             <div className="grid grid-cols-3 gap-3">

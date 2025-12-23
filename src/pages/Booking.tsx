@@ -260,8 +260,16 @@ export default function Booking() {
 
           if (error) throw error;
 
-          const shopOpen = 9; 
-          const shopClose = 19; 
+          // Default Fallback Schedule
+          let shopOpen = 9; 
+          let shopClose = 19; 
+          let lunchStart = 12;
+          let lunchEnd = 13;
+
+          // If barber has config, use it (Assuming it's in a table we haven't fetched fully yet, or use defaults)
+          // For now, we enforce defaults if no explicit config found.
+          // TODO: Fetch real schedule_config from 'barbeiros' or 'schedules' table
+
           const serviceDuration = selectedService?.duracao_minutos || 30;
 
           const busyIntervals = (existingAppts || []).map((appt: any) => {
@@ -270,6 +278,9 @@ export default function Booking() {
              const duration = appt.servicos?.[0]?.servicos?.duracao_minutos || 30;
              return { start: startMins, end: startMins + duration };
           });
+
+          // Add Lunch Break to Busy Intervals
+          busyIntervals.push({ start: lunchStart * 60, end: lunchEnd * 60 });
 
           const slots = [];
           for (let hour = shopOpen; hour < shopClose; hour++) {
@@ -287,14 +298,16 @@ export default function Booking() {
                if (selectedDate === new Date().toISOString().split('T')[0]) {
                  const now = new Date();
                  const nowMins = now.getHours() * 60 + now.getMinutes();
-                 if (currentSlotStart < nowMins) isPast = true;
+                 // Add small buffer (e.g. 15 mins)
+                 if (currentSlotStart < nowMins + 15) isPast = true;
                }
 
                const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
+               const labelString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
                
                slots.push({
                  time: timeString,
-                 label: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                 label: labelString,
                  available: !isBusy && !isPast
                });
             }
