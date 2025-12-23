@@ -5,7 +5,7 @@ import { Appointment, AppointmentFilters, AppointmentStatus } from '../../types/
 import { AppointmentsTable } from '../../components/appointments/AppointmentsTable';
 import { CreateAppointmentModal } from '../../components/appointments/CreateAppointmentModal';
 import { AppointmentModal } from '../../components/appointments/AppointmentModal';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Filter, Calendar as CalendarIcon, List as ListIcon, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek } from 'date-fns';
 

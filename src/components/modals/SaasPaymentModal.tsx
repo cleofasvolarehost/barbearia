@@ -16,7 +16,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
   const { user } = useAuth();
   const { establishment } = useEstablishment();
   const [loading, setLoading] = useState(false);
-  const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string } | null>(null);
+  const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string, ticket_url?: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
   // Reset state when modal opens/closes
