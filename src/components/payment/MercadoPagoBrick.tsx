@@ -50,7 +50,12 @@ export function MercadoPagoBrick({ amount, email, onSuccess, onError }: MercadoP
     brickInitialized.current = true;
 
     try {
-        const mp = new window.MercadoPago(import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY, {
+        const publicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
+        if (!publicKey) {
+            throw new Error('Chave pública do Mercado Pago não encontrada nas variáveis de ambiente.');
+        }
+
+        const mp = new window.MercadoPago(publicKey, {
             locale: 'pt-BR'
         });
 
