@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useEstablishment } from '../contexts/EstablishmentContext';
 import { GlassCard } from '../components/GlassCard';
-import { Save, Clock, MapPin, Phone, Store, Loader2 } from 'lucide-react';
+import { Save, Clock, Phone, Store, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function GeneralSettings() {
