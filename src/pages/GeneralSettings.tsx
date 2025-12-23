@@ -94,7 +94,7 @@ export default function GeneralSettings() {
             <div className="md:col-span-2">
               <label className="block text-sm text-gray-400 mb-2">Link da Barbearia (Slug)</label>
               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-                <span className="text-gray-500 text-sm">cyberbarber.app/</span>
+                <span className="text-gray-500 text-sm">{window.location.host}/</span>
                 <input 
                   type="text"
                   value={formData.slug}
