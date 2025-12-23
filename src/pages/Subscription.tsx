@@ -5,14 +5,14 @@ import { useEstablishment } from '../contexts/EstablishmentContext';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
-import { SubscriptionManagerModal } from '../components/modals/SubscriptionManagerModal';
+import { SubscriptionController } from '../components/subscription/SubscriptionController';
 
 export default function Subscription() {
   const { establishment, refreshEstablishment } = useEstablishment();
   const { user } = useAuth();
   const [plans, setPlans] = useState<any[]>([]);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const [managerTab, setManagerTab] = useState<'plans' | 'renew' | 'payment'>('plans');
+  const [managerTab, setManagerTab] = useState('plans');
   const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
@@ -115,7 +115,7 @@ export default function Subscription() {
 
   return (
     <div className="min-h-screen bg-[#121212] text-white p-4 md:p-8 pb-32">
-      <SubscriptionManagerModal 
+      <SubscriptionController 
         isOpen={isManagerOpen}
         onClose={() => setIsManagerOpen(false)}
         plans={plans}
