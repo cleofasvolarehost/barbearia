@@ -26,6 +26,7 @@ import MyAppointments from "./pages/MyAppointments"; // Import New Page
 import { EstablishmentProvider } from "./contexts/EstablishmentContext";
 import AdminSetup from "./pages/AdminSetup";
 import AdminServices from "./pages/AdminServices";
+import AdminPlans from "./pages/AdminPlans";
 import AdminTeam from "./pages/AdminTeam";
 import AdminBranding from "./pages/AdminBranding"; // Import AdminBranding
 import SuperAdminGateways from "./pages/super-admin/Gateways";
