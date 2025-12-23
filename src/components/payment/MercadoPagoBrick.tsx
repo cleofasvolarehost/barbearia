@@ -23,7 +23,20 @@ interface MercadoPagoBrickProps {
     visual?: {
         style?: {
             theme?: 'default' | 'dark' | 'flat' | 'bootstrap';
+            customVariables?: {
+                textPrimaryColor?: string;
+                textSecondaryColor?: string;
+                inputBackgroundColor?: string;
+                formBackgroundColor?: string;
+                baseColor?: string;
+                paymentOptionBackgroundColor?: string;
+                successColor?: string;
+                errorColor?: string;
+                warningColor?: string;
+                formPadding?: string;
+            };
         };
+        hidePaymentButton?: boolean;
     };
   };
 }
