@@ -273,7 +273,6 @@ export default function BookSlug() {
         serviceId: selectedService.id,
         userId: userId,
         price: selectedService.preco,
-        shopConfig: shop?.whatsapp_config,
         clientPhone,
         clientName
     });
