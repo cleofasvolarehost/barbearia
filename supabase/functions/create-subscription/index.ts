@@ -177,6 +177,14 @@ serve(async (req) => {
     // 6. Return Response
     const pointOfInteraction = data.point_of_interaction?.transaction_data;
     
+    // STRICT CHECK FOR PIX
+    if (payment_method_id === 'pix') {
+        if (!pointOfInteraction || !pointOfInteraction.qr_code || !pointOfInteraction.qr_code_base64) {
+            console.error('CRITICAL: Mercado Pago did not return PIX data.', JSON.stringify(data));
+            throw new Error('Erro ao gerar QR Code PIX: Dados incompletos do Mercado Pago.');
+        }
+    }
+    
     console.log('Returning Response. QR Code present?', !!pointOfInteraction?.qr_code);
 
     return new Response(
@@ -185,7 +193,7 @@ serve(async (req) => {
             status: data.status,
             qr_code: pointOfInteraction?.qr_code,
             qr_code_base64: pointOfInteraction?.qr_code_base64,
-            ticket_url: pointOfInteraction?.ticket_url, // For boleto if needed
+            ticket_url: pointOfInteraction?.ticket_url, 
             subscription_id: subData?.id,
             raw_mp_data: data // Send raw data for debugging frontend if needed
         }),

@@ -199,6 +199,17 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                 </div>
                             </div>
 
+                            {pixData.ticket_url && (
+                                <a 
+                                    href={pixData.ticket_url} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="block w-full text-center py-3 rounded-xl border border-[#7C3AED] text-[#7C3AED] font-bold hover:bg-[#7C3AED] hover:text-white transition-all"
+                                >
+                                    Abrir no Mercado Pago ↗
+                                </a>
+                            )}
+
                             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
                                 <p className="text-yellow-400 text-sm font-bold flex items-center justify-center gap-2">
                                     <Loader2 className="w-4 h-4 animate-spin" />
