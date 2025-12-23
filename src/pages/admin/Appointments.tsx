@@ -46,7 +46,10 @@ export default function AdminAppointmentsPage() {
     setLoading(true);
     setError(null);
     try {
-      const { data, count } = await appointmentsService.listAppointments(filters);
+      const { data, count } = await appointmentsService.listAppointments({
+        ...filters,
+        barbershop_id: establishment?.id
+      });
       setAppointments(data);
       if (count !== null) setTotalCount(count);
     } catch (error: any) {

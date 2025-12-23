@@ -52,6 +52,7 @@ export interface AppointmentFilters {
   status?: AppointmentStatus;
   barber_id?: string;
   service_id?: string;
+  barbershop_id?: string;
   search?: string; // name or phone
   page?: number;
   limit?: number;
