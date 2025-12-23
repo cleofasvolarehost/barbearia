@@ -108,10 +108,14 @@ export default function AdminServices() {
   const handleAutoFill = async () => {
     if (!establishment || !user) return;
     const standardServices = [
-      { establishment_id: establishment.id, owner_id: user.id, nome: 'Corte Masculino', preco: 40, duracao_minutos: 30, categoria: 'Cabelo', descricao: 'Corte tradicional ou degradê.' },
-      { establishment_id: establishment.id, owner_id: user.id, nome: 'Barba', preco: 30, duracao_minutos: 20, categoria: 'Barba', descricao: 'Barba modelada com toalha quente.' },
-      { establishment_id: establishment.id, owner_id: user.id, nome: 'Combo (Corte + Barba)', preco: 60, duracao_minutos: 50, categoria: 'Combo', descricao: 'Serviço completo.' },
-      { establishment_id: establishment.id, owner_id: user.id, nome: 'Sobrancelha', preco: 15, duracao_minutos: 10, categoria: 'Acabamento', descricao: 'Design de sobrancelha.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Corte de Cabelo (Social/Degradê)', preco: 40, duracao_minutos: 30, categoria: 'Cabelo', descricao: 'Corte tradicional ou degradê moderno.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Barba (Modelada)', preco: 30, duracao_minutos: 30, categoria: 'Barba', descricao: 'Barba modelada com toalha quente e navalha.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Sobrancelha', preco: 15, duracao_minutos: 10, categoria: 'Acabamento', descricao: 'Design de sobrancelha na navalha.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Pezinho (Acabamento)', preco: 15, duracao_minutos: 10, categoria: 'Acabamento', descricao: 'Acabamento do corte e contorno.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Combo: Cabelo + Barba', preco: 60, duracao_minutos: 50, categoria: 'Combo', descricao: 'Serviço completo de cabelo e barba.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Combo: Cabelo + Barba + Sobrancelha', preco: 70, duracao_minutos: 60, categoria: 'Combo', descricao: 'Pacote completo para o visual perfeito.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Pintura / Pigmentação', preco: 35, duracao_minutos: 45, categoria: 'Química', descricao: 'Pigmentação para realçar contornos ou esconder falhas.' },
+      { establishment_id: establishment.id, owner_id: user.id, nome: 'Selagem / Relaxamento', preco: 80, duracao_minutos: 60, categoria: 'Química', descricao: 'Alisamento ou relaxamento capilar.' },
     ];
 
     try {
@@ -250,6 +254,7 @@ export default function AdminServices() {
                   <option value="Cabelo">Cabelo</option>
                   <option value="Barba">Barba</option>
                   <option value="Combo">Combo</option>
+                  <option value="Química">Química</option>
                   <option value="Acabamento">Acabamento</option>
                   <option value="Outros">Outros</option>
                 </select>

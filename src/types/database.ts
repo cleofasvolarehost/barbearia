@@ -2,7 +2,16 @@ import { Database } from './supabase';
 
 export type User = Database['public']['Tables']['usuarios']['Row'];
 export type Service = Database['public']['Tables']['servicos']['Row'];
-export type Barber = Database['public']['Tables']['barbeiros']['Row'];
+// Extend Barber type manually since types are not auto-regenerated
+export type Barber = Database['public']['Tables']['barbeiros']['Row'] & {
+    work_days?: number[];
+    work_hours_start?: string;
+    work_hours_end?: string;
+    schedule_config?: {
+        workHours: { start: string; end: string };
+        lunchBreak: { start: string; end: string };
+    };
+};
 export type Appointment = Database['public']['Tables']['agendamentos']['Row'];
 export type AppointmentService = Database['public']['Tables']['agendamentos_servicos']['Row'];
 
@@ -41,6 +50,9 @@ export interface Establishment {
   mp_public_key?: string;
   accepts_pix?: boolean;
   
+  // Scheduling
+  slot_interval_min?: number;
+
   // Payment & Subscription
   manual_pix_key?: string;
   allow_pay_at_shop?: boolean;

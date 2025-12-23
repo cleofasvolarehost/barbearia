@@ -16,6 +16,10 @@ interface Barber {
   work_days?: number[]; // [0,1,2,3,4,5,6]
   work_hours_start?: string; // "09:00"
   work_hours_end?: string;   // "18:00"
+  schedule_config?: {
+    workHours: { start: string; end: string };
+    lunchBreak: { start: string; end: string };
+  };
 }
 
 export default function AdminTeam() {
@@ -40,7 +44,9 @@ export default function AdminTeam() {
   const [schedule, setSchedule] = useState({
       days: [] as number[],
       start: '09:00',
-      end: '18:00'
+      end: '19:00',
+      lunchStart: '12:00',
+      lunchEnd: '13:00'
   });
 
   const fetchTeam = async () => {
@@ -155,12 +161,18 @@ export default function AdminTeam() {
   const handleSaveSchedule = async () => {
       if (!selectedBarber) return;
       try {
+          const scheduleConfig = {
+              workHours: { start: schedule.start, end: schedule.end },
+              lunchBreak: { start: schedule.lunchStart, end: schedule.lunchEnd }
+          };
+
           const { error } = await supabase
             .from('barbeiros')
             .update({
                 work_days: schedule.days,
                 work_hours_start: schedule.start,
-                work_hours_end: schedule.end
+                work_hours_end: schedule.end,
+                schedule_config: scheduleConfig
             })
             .eq('id', selectedBarber.id);
 
@@ -183,10 +195,18 @@ export default function AdminTeam() {
 
   const openScheduleModal = (barber: Barber) => {
       setSelectedBarber(barber);
+      
+      const config = barber.schedule_config || {
+          workHours: { start: barber.work_hours_start || '09:00', end: barber.work_hours_end || '19:00' },
+          lunchBreak: { start: '12:00', end: '13:00' }
+      };
+
       setSchedule({
           days: barber.work_days || [1, 2, 3, 4, 5, 6], // Default Mon-Sat
-          start: barber.work_hours_start || '09:00',
-          end: barber.work_hours_end || '19:00'
+          start: config.workHours.start,
+          end: config.workHours.end,
+          lunchStart: config.lunchBreak.start,
+          lunchEnd: config.lunchBreak.end
       });
       setIsScheduleModalOpen(true);
   };
@@ -342,7 +362,7 @@ export default function AdminTeam() {
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
                       <div>
-                          <label className="block text-sm text-gray-400 mb-1">Início</label>
+                          <label className="block text-sm text-gray-400 mb-1">Início do Expediente</label>
                           <input 
                               type="time"
                               value={schedule.start}
@@ -351,11 +371,37 @@ export default function AdminTeam() {
                           />
                       </div>
                       <div>
-                          <label className="block text-sm text-gray-400 mb-1">Fim</label>
+                          <label className="block text-sm text-gray-400 mb-1">Fim do Expediente</label>
                           <input 
                               type="time"
                               value={schedule.end}
                               onChange={e => setSchedule({...schedule, end: e.target.value})}
+                              className="w-full bg-black/20 border border-white/10 rounded-xl p-2 text-white outline-none focus:border-[#7C3AED]"
+                          />
+                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-6 border-t border-white/10 pt-4">
+                      <div className="col-span-2">
+                          <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-yellow-500"></span> Pausa para Almoço
+                          </h4>
+                      </div>
+                      <div>
+                          <label className="block text-sm text-gray-400 mb-1">Início da Pausa</label>
+                          <input 
+                              type="time"
+                              value={schedule.lunchStart}
+                              onChange={e => setSchedule({...schedule, lunchStart: e.target.value})}
+                              className="w-full bg-black/20 border border-white/10 rounded-xl p-2 text-white outline-none focus:border-[#7C3AED]"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-sm text-gray-400 mb-1">Fim da Pausa</label>
+                          <input 
+                              type="time"
+                              value={schedule.lunchEnd}
+                              onChange={e => setSchedule({...schedule, lunchEnd: e.target.value})}
                               className="w-full bg-black/20 border border-white/10 rounded-xl p-2 text-white outline-none focus:border-[#7C3AED]"
                           />
                       </div>

@@ -8,6 +8,8 @@ import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../hooks/useAuth';
 import { bookingsApi } from '../api/bookings';
 
+import { getAvailableSlots } from '../utils/availability';
+
 // Premium Components
 import { BarberSelection } from '../components/booking/premium/BarberSelection';
 import { ServiceSelection } from '../components/booking/premium/ServiceSelection';
@@ -87,13 +89,20 @@ export default function BookSlug() {
 
   // 2. Availability Engine
   useEffect(() => {
-    // In a real scenario, fetch from DB based on selectedDate and selectedBarber
-    // Mocking for now as per previous logic, but ideally use an RPC or query
-    if (selectedDate && selectedBarber) {
-      // Mock slots
-      setAvailableSlots(['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00']);
+    async function fetchAvailability() {
+        if (selectedDate && selectedBarber) {
+            // Use centralized logic that considers Overrides
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
+            const slots = await getAvailableSlots(
+                dateStr, 
+                selectedBarber.id, 
+                selectedService?.duracao_minutos || 30
+            );
+            setAvailableSlots(slots);
+        }
     }
-  }, [selectedDate, selectedBarber]);
+    fetchAvailability();
+  }, [selectedDate, selectedBarber, selectedService]);
 
   // Handlers
   const handleBarberSelect = (barber: Barber) => {

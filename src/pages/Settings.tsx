@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useEstablishment } from '../contexts/EstablishmentContext';
 import { GlassCard } from '../components/GlassCard';
-import { Upload, Save, Palette, Image as ImageIcon, Check, Loader2, Trash2, ExternalLink } from 'lucide-react';
+import { Upload, Save, Palette, Image as ImageIcon, Check, Loader2, Trash2, ExternalLink, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function Settings() {
@@ -16,7 +16,8 @@ export default function Settings() {
     primary_color: '#7C3AED',
     secondary_color: '#2DD4BF',
     logo_url: '',
-    banner_url: ''
+    banner_url: '',
+    slot_interval_min: 30
   });
 
   useEffect(() => {
@@ -25,7 +26,8 @@ export default function Settings() {
         primary_color: establishment.primary_color || '#7C3AED',
         secondary_color: establishment.secondary_color || '#2DD4BF',
         logo_url: establishment.logo_url || '',
-        banner_url: establishment.banner_url || ''
+        banner_url: establishment.banner_url || '',
+        slot_interval_min: establishment.slot_interval_min || 30
       });
     }
   }, [establishment]);
@@ -74,7 +76,8 @@ export default function Settings() {
           primary_color: theme.primary_color,
           secondary_color: theme.secondary_color,
           logo_url: theme.logo_url,
-          banner_url: theme.banner_url
+          banner_url: theme.banner_url,
+          slot_interval_min: theme.slot_interval_min
         })
         .eq('id', establishment.id);
 
@@ -97,6 +100,29 @@ export default function Settings() {
         
         {/* Left Column: Controls */}
         <div className="space-y-6">
+
+          {/* Agenda Settings */}
+          <GlassCard className="p-6 space-y-6">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-400" /> Agenda
+            </h3>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Intervalo Padrão da Agenda</label>
+              <select
+                  value={theme.slot_interval_min}
+                  onChange={e => setTheme({...theme, slot_interval_min: parseInt(e.target.value)})}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white [&>option]:bg-[#121212]"
+              >
+                  <option value={15}>15 em 15 minutos</option>
+                  <option value={20}>20 em 20 minutos</option>
+                  <option value={30}>30 em 30 minutos (Padrão)</option>
+                  <option value={40}>40 em 40 minutos</option>
+                  <option value={45}>45 em 45 minutos</option>
+                  <option value={60}>1 em 1 hora</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Isso define de quanto em quanto tempo os horários aparecem para o cliente (grade).</p>
+            </div>
+          </GlassCard>
           
           {/* Colors */}
           <GlassCard className="p-6 space-y-6">

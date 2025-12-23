@@ -4,11 +4,13 @@ import { Appointment } from '../types/database';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { useAuth } from '../hooks/useAuth';
-import { Filter } from 'lucide-react';
+import { Filter, Ban, Trash2 } from 'lucide-react';
+import { BlockTimeModal } from '../components/BlockTimeModal';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [overrides, setOverrides] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     todayRevenue: 0,
@@ -20,6 +22,9 @@ export default function AdminDashboard() {
   const [canManage, setCanManage] = useState(false);
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedBarber, setSelectedBarber] = useState<string>('all');
+  
+  // Modal State
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
 
   useEffect(() => {
       checkPermissions();
@@ -86,6 +91,20 @@ export default function AdminDashboard() {
 
       if (todayError) throw todayError;
 
+      // 1.5 Fetch Overrides for today
+      let overrideQuery = supabase
+        .from('schedule_overrides')
+        .select('*, barbeiro:barbeiros(nome)')
+        .gte('start_time', `${today}T00:00:00`)
+        .lte('end_time', `${today}T23:59:59`);
+        
+      if (selectedBarber !== 'all') {
+          overrideQuery = overrideQuery.eq('barber_id', selectedBarber);
+      }
+      
+      const { data: overrideData } = await overrideQuery;
+      setOverrides(overrideData || []);
+
       // 2. Fetch all pending appointments (optional, for stats)
       const { count: pendingCount, error: pendingError } = await supabase
         .from('agendamentos')
@@ -138,6 +157,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteOverride = async (id: string) => {
+    if (!window.confirm('Deseja remover este bloqueio?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('schedule_overrides')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Bloqueio removido!');
+      fetchDashboardData();
+    } catch (error) {
+      toast.error('Erro ao remover bloqueio');
+    }
+  };
+
   if (loading && !appointments.length) {
     return <div className="p-8 text-center text-white bg-dark min-h-screen">Carregando painel...</div>;
   }
@@ -179,18 +215,27 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-4">
                 {/* Filter Dropdown (Only for Managers/Owners) */}
                 {canManage && (
-                    <div className="relative">
-                        <select
-                            value={selectedBarber}
-                            onChange={(e) => setSelectedBarber(e.target.value)}
-                            className="bg-black/20 text-white text-sm border border-gray-700 rounded-none px-3 py-1.5 focus:border-gold outline-none appearance-none pr-8 cursor-pointer uppercase tracking-wider font-bold"
+                    <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setIsBlockModalOpen(true)}
+                          className="flex items-center gap-1 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-none text-xs font-bold uppercase tracking-wide transition-colors"
                         >
-                            <option value="all">Todos os Barbeiros</option>
-                            {barbers.map(b => (
-                                <option key={b.id} value={b.id}>{b.nome}</option>
-                            ))}
-                        </select>
-                        <Filter className="w-3 h-3 text-gold absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <Ban className="w-3 h-3" />
+                            Bloquear Horário
+                        </button>
+                        <div className="relative">
+                            <select
+                                value={selectedBarber}
+                                onChange={(e) => setSelectedBarber(e.target.value)}
+                                className="bg-black/20 text-white text-sm border border-gray-700 rounded-none px-3 py-1.5 focus:border-gold outline-none appearance-none pr-8 cursor-pointer uppercase tracking-wider font-bold"
+                            >
+                                <option value="all">Todos os Barbeiros</option>
+                                {barbers.map(b => (
+                                    <option key={b.id} value={b.id}>{b.nome}</option>
+                                ))}
+                            </select>
+                            <Filter className="w-3 h-3 text-gold absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
                     </div>
                 )}
 
@@ -203,7 +248,44 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="">
-            {appointments.length === 0 ? (
+            {/* Overrides List */}
+            {overrides.length > 0 && (
+              <div className="border-b border-gray-800 bg-red-900/10">
+                <ul className="divide-y divide-gray-800">
+                  {overrides.map((override) => (
+                    <li key={override.id} className="flex items-center justify-between gap-x-6 py-4 px-6 relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#000000_10px,#000000_20px)] opacity-10 pointer-events-none"></div>
+                      <div className="min-w-0 relative z-10">
+                        <div className="flex items-start gap-x-3">
+                          <p className="text-sm font-bold leading-6 text-red-400">
+                            {override.type === 'full_day' 
+                              ? 'DIA INTEIRO' 
+                              : `${format(new Date(override.start_time), 'HH:mm')} - ${format(new Date(override.end_time), 'HH:mm')}`}
+                          </p>
+                          <span className="inline-flex items-center rounded-none bg-red-400/10 px-2 py-1 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-400/20 uppercase">
+                            BLOQUEADO
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-400">
+                          <p className="truncate">Barbeiro: <span className="text-gray-300">{override.barbeiro?.nome}</span></p>
+                          <span className="text-gray-600">•</span>
+                          <p className="truncate">Motivo: <span className="text-white">{override.reason}</span></p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteOverride(override.id)}
+                        className="text-gray-500 hover:text-red-500 transition-colors z-10"
+                        title="Remover Bloqueio"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {appointments.length === 0 && overrides.length === 0 ? (
               <div className="p-6 text-center text-gray-500">Nenhum agendamento para hoje.</div>
             ) : (
               <ul role="list" className="divide-y divide-gray-800">
@@ -253,6 +335,14 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      <BlockTimeModal 
+        isOpen={isBlockModalOpen}
+        onClose={() => setIsBlockModalOpen(false)}
+        onSuccess={fetchDashboardData}
+        barbers={barbers}
+        currentUser={user}
+      />
     </div>
   );
 }
