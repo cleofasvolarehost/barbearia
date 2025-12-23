@@ -66,7 +66,14 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
       setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
+  const handleBrickSuccess = async (
+    token: string | undefined,
+    issuer_id?: string,
+    payment_method_id?: string,
+    card_holder_name?: string,
+    identification?: any,
+    installments?: number
+  ) => {
     setLoading(true);
     try {
         if (!establishment || !user?.email) return;
@@ -88,7 +95,8 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 issuer_id,
                 payment_method_id,
                 card_holder_name,
-                identification
+                identification,
+                installments
             })
         });
 

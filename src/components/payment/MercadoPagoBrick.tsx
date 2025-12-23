@@ -10,7 +10,14 @@ interface MercadoPagoBrickProps {
   amount: number;
   email: string;
   publicKey?: string;
-  onSuccess: (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => void;
+  onSuccess: (
+    token: string | undefined,
+    issuer_id?: string,
+    payment_method_id?: string,
+    card_holder_name?: string,
+    identification?: any,
+    installments?: number
+  ) => void;
   onError: (error: any) => void;
   customization?: {
     paymentMethods?: {
@@ -161,7 +168,8 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
                                 formData.issuer_id, 
                                 formData.payment_method_id,
                                 formData.card?.cardholder?.name,
-                                formData.payer?.identification
+                                formData.payer?.identification,
+                                formData.installments
                             );
                             resolve();
                         } else {
