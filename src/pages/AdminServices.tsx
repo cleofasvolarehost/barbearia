@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useEstablishment } from '../contexts/EstablishmentContext';
+import { useAuth } from '../hooks/useAuth';
 import { GlassCard } from '../components/GlassCard';
 import { Plus, Edit, Trash2, Wand2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -8,6 +9,7 @@ import { Service } from '../types/database';
 
 export default function AdminServices() {
   const { establishment, loading: establishmentLoading } = useEstablishment();
+  const { user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,6 +59,7 @@ export default function AdminServices() {
     try {
       const payload = {
         establishment_id: establishment.id,
+        owner_id: user?.id,
         nome: formData.nome,
         descricao: formData.descricao,
         preco: parseFloat(formData.preco),
