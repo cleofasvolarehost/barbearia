@@ -12,4 +12,4 @@ Sistema completo de agendamento para barbearias.
 
 ## Deploy
 Este projeto está configurado para deploy automático na Vercel.
-Última atualização: Trigger Vercel Deploy.
+Última verificação de integração: 2025-12-22 (Teste de conexão Git-Vercel)
