@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { QrCode, Copy, Check, MessageCircle, ArrowLeft, Timer, Sparkles } from 'lucide-react';
+import { QrCode, Copy, Check, MessageCircle, ArrowLeft, Timer, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+import { createPixPayment } from '../api/payment';
 
 export type PaymentMethod = 'pix-auto' | 'pix-manual' | 'in-person' | null;
 
@@ -13,6 +14,10 @@ interface PaymentScreenProps {
   barberName?: string;
   barberAvatar?: string;
   onSuccess?: () => void;
+  // New props for Real Pix
+  establishmentId?: string;
+  clientName?: string;
+  clientEmail?: string;
 }
 
 export function PaymentScreen({ 
@@ -23,10 +28,50 @@ export function PaymentScreen({
   serviceName,
   barberName = 'Barbeiro',
   barberAvatar,
-  onSuccess
+  onSuccess,
+  establishmentId,
+  clientName,
+  clientEmail
 }: PaymentScreenProps) {
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutos em segundos
+  
+  // Real Pix State
+  const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string } | null>(null);
+  const [loadingPix, setLoadingPix] = useState(false);
+  const [errorPix, setErrorPix] = useState<string | null>(null);
+
+  // Generate Pix if Auto
+  useEffect(() => {
+    if (method === 'pix-auto' && !pixData && !loadingPix && !errorPix) {
+        if (!establishmentId) {
+            setErrorPix("ID da barbearia não fornecido.");
+            return;
+        }
+
+        const generatePix = async () => {
+            setLoadingPix(true);
+            try {
+                const data = await createPixPayment({
+                    establishment_id: establishmentId,
+                    appointment_data: {
+                        price: amount,
+                        service_name: serviceName,
+                        client_name: clientName || 'Cliente',
+                        client_email: clientEmail
+                    }
+                });
+                setPixData(data);
+            } catch (err: any) {
+                console.error("Pix Error:", err);
+                setErrorPix(err.message || "Erro ao gerar Pix.");
+            } finally {
+                setLoadingPix(false);
+            }
+        };
+        generatePix();
+    }
+  }, [method, establishmentId, amount, serviceName, clientName, clientEmail]);
 
   // Timer countdown
   useEffect(() => {
@@ -49,9 +94,6 @@ export function PaymentScreen({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  // Mock Pix Code for Gateway Simulation
-  const pixCode = '00020126580014BR.GOV.BCB.PIX0136a1b2c3d4-e5f6-7890-ab12-cd34ef567890520400005303986540550.005802BR5925BARBEARIA NEXTLEVEL6009SAO PAULO62070503***6304ABCD';
 
   if (method === 'pix-auto') {
     return (
@@ -98,116 +140,142 @@ export function PaymentScreen({
 
         {/* Content */}
         <div className="px-4 pb-24 pt-6 max-w-md mx-auto w-full flex-1 overflow-y-auto">
-          <p className="text-xs text-center text-gray-500 mb-6">Escaneie o QR Code ou copie o código abaixo</p>
-
-          {/* QR Code Container */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="mb-6"
-          >
-            <div className="relative p-6 rounded-3xl backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/[0.02] border border-white/20">
-              {/* Decorative corners */}
-              <div className="absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-[#7C3AED]" />
-              <div className="absolute top-4 right-4 w-6 h-6 border-r-2 border-t-2 border-[#7C3AED]" />
-              <div className="absolute bottom-4 left-4 w-6 h-6 border-l-2 border-b-2 border-[#7C3AED]" />
-              <div className="absolute bottom-4 right-4 w-6 h-6 border-r-2 border-b-2 border-[#7C3AED]" />
-
-              {/* QR Code (Mock) */}
-              <div className="bg-white p-6 rounded-2xl mx-auto w-fit">
-                <QrCode className="w-48 h-48 text-black" strokeWidth={0.5} />
+          
+          {loadingPix && (
+              <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-10 h-10 text-[#7C3AED] animate-spin mb-4" />
+                  <p className="text-gray-400">Gerando QR Code...</p>
               </div>
+          )}
 
-              {/* Scanning animation */}
-              <motion.div
-                animate={{ y: [0, 200, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                className="absolute inset-x-0 mx-6 h-1 bg-gradient-to-r from-transparent via-[#7C3AED] to-transparent opacity-50"
-                style={{ top: '2.5rem' }}
-              />
-            </div>
-          </motion.div>
+          {errorPix && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex flex-col items-center text-center">
+                  <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
+                  <p className="text-red-400 font-bold mb-1">Erro ao gerar Pix</p>
+                  <p className="text-xs text-red-300 mb-4">{errorPix}</p>
+                  <button onClick={onBack} className="text-sm underline text-red-300">Voltar e tentar outro método</button>
+              </div>
+          )}
 
-          {/* Amount Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="p-4 rounded-2xl bg-gradient-to-br from-[#7C3AED]/10 to-transparent border border-[#7C3AED]/30 mb-4"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Valor a pagar</span>
-              <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF]">
-                R$ {amount.toFixed(2)}
-              </span>
-            </div>
-          </motion.div>
+          {!loadingPix && !errorPix && pixData && (
+            <>
+                <p className="text-xs text-center text-gray-500 mb-6">Escaneie o QR Code ou copie o código abaixo</p>
 
-          {/* Copy Code Button */}
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            onClick={() => handleCopy(pixCode)}
-            whileTap={{ scale: 0.98 }}
-            className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] transition-all font-bold flex items-center justify-center gap-2 mb-4"
-          >
-            {copied ? (
-              <>
-                <Check className="w-5 h-5" />
-                <span>Código Copiado!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-5 h-5" />
-                <span>Copiar Código Pix</span>
-              </>
-            )}
-          </motion.button>
+                {/* QR Code Container */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="mb-6"
+                >
+                    <div className="relative p-6 rounded-3xl backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/[0.02] border border-white/20">
+                    {/* Decorative corners */}
+                    <div className="absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-[#7C3AED]" />
+                    <div className="absolute top-4 right-4 w-6 h-6 border-r-2 border-t-2 border-[#7C3AED]" />
+                    <div className="absolute bottom-4 left-4 w-6 h-6 border-l-2 border-b-2 border-[#7C3AED]" />
+                    <div className="absolute bottom-4 right-4 w-6 h-6 border-r-2 border-b-2 border-[#7C3AED]" />
 
-          {/* Instructions */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="p-4 rounded-2xl bg-white/5 border border-white/10"
-          >
-            <h3 className="font-bold text-white mb-3 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#7C3AED]" />
-              Como pagar
-            </h3>
-            <ol className="space-y-2 text-sm text-gray-400">
-              <li className="flex gap-2">
-                <span className="text-[#7C3AED] font-bold">1.</span>
-                <span>Abra o app do seu banco</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#7C3AED] font-bold">2.</span>
-                <span>Escolha pagar com Pix QR Code</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#7C3AED] font-bold">3.</span>
-                <span>Escaneie o código ou cole o código copiado</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#7C3AED] font-bold">4.</span>
-                <span>Confirme o pagamento de R$ {amount.toFixed(2)}</span>
-              </li>
-            </ol>
-          </motion.div>
+                    {/* QR Code (Real) */}
+                    <div className="bg-white p-6 rounded-2xl mx-auto w-fit">
+                        <img 
+                            src={`data:image/png;base64,${pixData.qr_code_base64}`} 
+                            alt="Pix QR Code" 
+                            className="w-48 h-48 object-contain"
+                        />
+                    </div>
 
-          {/* Status Message */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="mt-6 p-3 rounded-xl bg-gradient-to-r from-[#10B981]/10 to-[#14B8A6]/10 border border-[#10B981]/20"
-          >
-            <p className="text-xs text-center text-gray-300">
-              ⚡ <span className="text-[#10B981] font-semibold">Pagamento detectado automaticamente!</span> Você será notificado em instantes.
-            </p>
-          </motion.div>
+                    {/* Scanning animation */}
+                    <motion.div
+                        animate={{ y: [0, 200, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                        className="absolute inset-x-0 mx-6 h-1 bg-gradient-to-r from-transparent via-[#7C3AED] to-transparent opacity-50"
+                        style={{ top: '2.5rem' }}
+                    />
+                    </div>
+                </motion.div>
+
+                {/* Amount Card */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="p-4 rounded-2xl bg-gradient-to-br from-[#7C3AED]/10 to-transparent border border-[#7C3AED]/30 mb-4"
+                >
+                    <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Valor a pagar</span>
+                    <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF]">
+                        R$ {amount.toFixed(2)}
+                    </span>
+                    </div>
+                </motion.div>
+
+                {/* Copy Code Button */}
+                <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    onClick={() => handleCopy(pixData.qr_code)}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] transition-all font-bold flex items-center justify-center gap-2 mb-4"
+                >
+                    {copied ? (
+                    <>
+                        <Check className="w-5 h-5" />
+                        <span>Código Copiado!</span>
+                    </>
+                    ) : (
+                    <>
+                        <Copy className="w-5 h-5" />
+                        <span>Copiar Código Pix</span>
+                    </>
+                    )}
+                </motion.button>
+
+                {/* Instructions */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="p-4 rounded-2xl bg-white/5 border border-white/10"
+                >
+                    <h3 className="font-bold text-white mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#7C3AED]" />
+                    Como pagar
+                    </h3>
+                    <ol className="space-y-2 text-sm text-gray-400">
+                    <li className="flex gap-2">
+                        <span className="text-[#7C3AED] font-bold">1.</span>
+                        <span>Abra o app do seu banco</span>
+                    </li>
+                    <li className="flex gap-2">
+                        <span className="text-[#7C3AED] font-bold">2.</span>
+                        <span>Escolha pagar com Pix QR Code</span>
+                    </li>
+                    <li className="flex gap-2">
+                        <span className="text-[#7C3AED] font-bold">3.</span>
+                        <span>Escaneie o código ou cole o código copiado</span>
+                    </li>
+                    <li className="flex gap-2">
+                        <span className="text-[#7C3AED] font-bold">4.</span>
+                        <span>Confirme o pagamento de R$ {amount.toFixed(2)}</span>
+                    </li>
+                    </ol>
+                </motion.div>
+
+                {/* Status Message */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="mt-6 p-3 rounded-xl bg-gradient-to-r from-[#10B981]/10 to-[#14B8A6]/10 border border-[#10B981]/20"
+                >
+                    <p className="text-xs text-center text-gray-300">
+                    ⚡ <span className="text-[#10B981] font-semibold">Pagamento detectado automaticamente!</span> Você será notificado em instantes.
+                    </p>
+                </motion.div>
+            </>
+          )}
+
         </div>
       </div>
     );

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 declare global {
   interface Window {
@@ -16,6 +16,7 @@ interface MercadoPagoBrickProps {
 
 export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSuccess, onError }: MercadoPagoBrickProps) {
   const brickInitialized = useRef(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     // Prevent double init
@@ -51,14 +52,21 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
     brickInitialized.current = true;
 
     try {
-        // First try to get from props or context if dynamic (SaaS), otherwise fallback to env (Platform)
-        let publicKey = propPublicKey || import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
+        // FIX: Robust Environment Variable Loading (Vite + Next.js compatible)
+        // Checks specifically for VITE_MP_PUBLIC_KEY as primary, then legacy vars
+        const envKey = import.meta.env.VITE_MP_PUBLIC_KEY || 
+                       import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY || 
+                       // @ts-ignore - Process might not be defined in Vite
+                       (typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_MP_PUBLIC_KEY : undefined);
+
+        const publicKey = propPublicKey || envKey;
         
-        // Debugging logs
-        console.log('MP Public Key:', publicKey ? 'Found' : 'Missing');
+        // DEBUG LOGGING
+        console.log("MP Init Status:", publicKey ? "Key Found (" + publicKey.slice(0, 8) + "...)" : "Key Missing");
 
         if (!publicKey) {
-             console.error('Mercado Pago Public Key is missing. Please set VITE_MERCADO_PAGO_PUBLIC_KEY in .env');
+             console.warn('⚠️ MP Key missing in Vercel Envs');
+             setInitError('Pagamento indisponível no momento (Configuração ausente).');
              onError('Configuração de pagamento incompleta (Chave Pública ausente).');
              return;
         }
@@ -124,9 +132,19 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
         await bricksBuilder.create('payment', 'paymentBrick_container', settings);
     } catch (err) {
         console.error('Brick Init Error:', err);
+        setInitError('Erro ao inicializar pagamento.');
         onError(err);
     }
   };
+
+  if (initError) {
+      return (
+          <div className="w-full max-w-md mx-auto p-6 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
+              <p className="text-red-400 font-bold mb-2">Erro de Configuração</p>
+              <p className="text-sm text-red-300">{initError}</p>
+          </div>
+      );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto">

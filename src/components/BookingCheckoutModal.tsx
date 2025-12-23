@@ -374,6 +374,9 @@ export function BookingCheckoutModal({ isOpen, onClose, appointment, onSuccess, 
                     pixKey={settings?.manual_pix_key}
                     barberName={getBarberName()}
                     onSuccess={handleClose}
+                    establishmentId={appointment?.establishment_id || settings?.id}
+                    clientName={appointment?.cliente?.nome || appointment?.client_name}
+                    clientEmail={appointment?.cliente?.email || appointment?.client_email}
                 />
               )}
             </div>
