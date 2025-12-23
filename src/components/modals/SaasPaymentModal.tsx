@@ -364,6 +364,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                             <div className="px-6 pb-6 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 {selectedMethod && (
                                 <MercadoPagoBrick 
+                                    key={selectedMethod} // FORCE RE-RENDER on method change to auto-select single option
                                     amount={Number(plan.price)} 
                                     email={user?.email || ''}
                                     onSuccess={handleBrickSuccess}
@@ -373,7 +374,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                             creditCard: selectedMethod === 'credit' ? 'all' : [],
                                             debitCard: selectedMethod === 'credit' ? 'all' : [],
                                             ticket: selectedMethod === 'boleto' ? 'all' : [],
-                                            bankTransfer: selectedMethod === 'pix' ? 'all' : [],
+                                            bankTransfer: selectedMethod === 'pix' ? ['pix'] : [],
                                             maxInstallments: 1
                                         },
                                         visual: {
@@ -384,7 +385,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                                     baseColor: '#10B981'
                                                 }
                                             },
-                                            hidePaymentButton: false // Always show MP button, let it handle the flow
+                                            hidePaymentButton: false 
                                         }
                                     }}
                                 />
