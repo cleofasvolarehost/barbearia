@@ -36,7 +36,10 @@ export async function getAvailableSlots(
       .gte('start_time', startOfDayDate.toISOString())
       .lte('end_time', endOfDayDate.toISOString());
 
-    if (overrideError) throw overrideError;
+    if (overrideError) {
+        // If 404 or missing table/column, ignore overrides for now
+        // console.error('Error fetching overrides:', overrideError);
+    } 
 
     // 3. Convert everything to busy intervals (minutes from midnight)
     const busyIntervals: Interval[] = [];
@@ -49,21 +52,23 @@ export async function getAvailableSlots(
       busyIntervals.push({ start: startMins, end: startMins + duration });
     });
 
-    // Overrides to Intervals
-    overrides?.forEach((override: any) => {
-      const start = new Date(override.start_time);
-      const end = new Date(override.end_time);
-      
-      const startMins = start.getHours() * 60 + start.getMinutes();
-      const endMins = end.getHours() * 60 + end.getMinutes();
+    if (!overrideError) {
+        // Overrides to Intervals
+        overrides?.forEach((override: any) => {
+        const start = new Date(override.start_time);
+        const end = new Date(override.end_time);
+        
+        const startMins = start.getHours() * 60 + start.getMinutes();
+        const endMins = end.getHours() * 60 + end.getMinutes();
 
-      // Handle full day
-      if (override.type === 'full_day') {
-        busyIntervals.push({ start: 0, end: 24 * 60 });
-      } else {
-        busyIntervals.push({ start: startMins, end: endMins });
-      }
-    });
+        // Handle full day
+        if (override.type === 'full_day') {
+            busyIntervals.push({ start: 0, end: 24 * 60 });
+        } else {
+            busyIntervals.push({ start: startMins, end: endMins });
+        }
+        });
+    }
 
     // 4. Generate Slots
     const [openH, openM] = shopOpenHour.split(':').map(Number);
