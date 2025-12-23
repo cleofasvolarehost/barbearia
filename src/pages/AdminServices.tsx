@@ -42,7 +42,7 @@ export default function AdminServices() {
       setServices(data || []);
       
       // Update categories from establishment if available
-      if (establishment.service_categories && establishment.service_categories.length > 0) {
+      if (establishment.service_categories) {
           setCategories(establishment.service_categories);
       }
     } catch (error) {
@@ -163,6 +163,33 @@ export default function AdminServices() {
         // Refresh establishment context if possible, or just local state is enough for now
     } catch (error) {
         toast.error('Erro ao salvar categoria');
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    const categoryToDelete = formData.categoria;
+    if (!categoryToDelete) return;
+    
+    if (!confirm(`Tem certeza que deseja excluir a categoria "${categoryToDelete}"?`)) return;
+
+    const updatedCategories = categories.filter(c => c !== categoryToDelete);
+    
+    try {
+        const { error } = await supabase
+            .from('establishments')
+            .update({ service_categories: updatedCategories })
+            .eq('id', establishment?.id);
+
+        if (error) throw error;
+        
+        setCategories(updatedCategories);
+        // Reset selection to first available or default
+        const newSelected = updatedCategories.length > 0 ? updatedCategories[0] : '';
+        setFormData({ ...formData, categoria: newSelected });
+        toast.success('Categoria excluída!');
+    } catch (error) {
+        console.error('Error deleting category:', error);
+        toast.error('Erro ao excluir categoria');
     }
   };
 
@@ -319,6 +346,14 @@ export default function AdminServices() {
                             <option key={cat} value={cat}>{cat}</option>
                         ))}
                         </select>
+                        <button 
+                            type="button"
+                            onClick={handleDeleteCategory}
+                            title="Excluir Categoria"
+                            className="bg-white/5 hover:bg-red-500/20 text-white hover:text-red-500 px-3 py-2 rounded-xl font-bold transition-colors border border-white/10"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
                         <button 
                             type="button"
                             onClick={() => setIsAddingCategory(true)}
