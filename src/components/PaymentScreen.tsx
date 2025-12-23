@@ -98,7 +98,7 @@ export function PaymentScreen({
         </div>
 
         {/* Content */}
-        <div className="px-4 pb-8 max-w-md mx-auto w-full flex-1">
+        <div className="px-4 pb-20 max-w-md mx-auto w-full flex-1">
           {/* QR Code Container */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -243,7 +243,7 @@ export function PaymentScreen({
         </div>
 
         {/* Content */}
-        <div className="px-4 pb-8 max-w-md mx-auto w-full flex-1">
+        <div className="px-4 pb-20 max-w-md mx-auto w-full flex-1">
           {/* Barber Info */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
