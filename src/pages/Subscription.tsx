@@ -158,7 +158,7 @@ export default function Subscription() {
               </ul>
 
               <button
-                onClick={() => handleSelectPlan(plan.id)}
+                onClick={() => handleSelectPlan(plan)}
                 className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
                   plan.is_recommended
                     ? 'bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-lg hover:shadow-[#7C3AED]/50 text-white'

@@ -37,7 +37,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 token,
                 payer_email: user.email,
                 establishment_id: establishment.id,
-                plan_id: plan.id,
+                plan_id: plan.id, // Ensure this is definitely passed
                 issuer_id,
                 payment_method_id,
                 card_holder_name,
