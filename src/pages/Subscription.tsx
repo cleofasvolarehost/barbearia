@@ -35,6 +35,7 @@ export default function Subscription() {
   };
 
   const handleSelectPlan = (plan: any) => {
+    console.log("Passing Price to Modal:", plan.price);
     setSelectedPlan(plan);
     setIsPaymentModalOpen(true);
   };

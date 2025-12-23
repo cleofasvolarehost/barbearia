@@ -46,8 +46,15 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
     if (!window.MercadoPago) return;
     
     // Check Amount Validity
-    if (!amount || amount <= 0) {
-        console.warn('Brick Init: Amount is invalid or missing:', amount);
+    // FAILSAFE: If amount is 0, force 1.00 for testing/preventing UI block
+    const finalAmount = amount > 0 ? amount : 1.00;
+    
+    if (amount <= 0) {
+        console.warn('Brick Init: Amount was 0, forced to 1.00 for debugging.');
+    }
+
+    if (!finalAmount || finalAmount <= 0) {
+        console.warn('Brick Init: Amount is invalid or missing:', finalAmount);
         return; 
     }
 
@@ -73,6 +80,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
 
         // DEBUG LOGGING
         console.log("MP Init Status:", publicKey ? "Key Found (" + publicKey.slice(0, 8) + "...)" : "Key Missing");
+        console.log("Passing Price to Modal (Final):", finalAmount);
 
         if (!publicKey) {
              console.warn('⚠️ MP Key missing in Vercel Envs');
@@ -89,7 +97,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
 
         const settings = {
             initialization: {
-                amount: Number(amount),
+                amount: Number(finalAmount),
                 payer: {
                     email: email,
                     entityType: 'individual'

@@ -19,6 +19,8 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
 
   if (!isOpen || !plan) return null;
 
+  console.log("SaasPaymentModal: Rendering with price:", plan.price);
+
   const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
     setLoading(true);
     try {

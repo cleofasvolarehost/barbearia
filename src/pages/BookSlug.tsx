@@ -216,7 +216,36 @@ export default function BookSlug() {
         clientName
     });
 
-    if (!result.success) throw new Error(result.message);
+    if (!result.success) {
+        // SMART RECOVERY: If time is passed/unavailable, suggest next slot
+        if (result.message?.match(/(passou|indisponível|passed|unavailable)/i)) {
+            const currentIndex = availableSlots.indexOf(selectedTime);
+            
+            // Check if there is a next slot available
+            if (currentIndex !== -1 && currentIndex < availableSlots.length - 1) {
+                const nextSlot = availableSlots[currentIndex + 1];
+                
+                // Update state
+                setSelectedTime(nextSlot);
+                
+                // Show interactive toast
+                toast.error(
+                    (t) => (
+                        <div className="flex flex-col gap-1">
+                            <span>❌ O horário {selectedTime} expirou.</span>
+                            <span className="font-bold text-[#2DD4BF] animate-pulse">➜ Mudamos para {nextSlot}</span>
+                            <span className="text-xs opacity-75">Confirme novamente para garantir.</span>
+                        </div>
+                    ), 
+                    { duration: 6000 }
+                );
+                
+                setIsProcessing(false);
+                return; // Exit and let user confirm with new time
+            }
+        }
+        throw new Error(result.message);
+    }
     
     setStep('success');
     setIsProcessing(false);
