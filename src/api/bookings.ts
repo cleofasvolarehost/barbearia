@@ -43,8 +43,35 @@ export const bookingsApi = {
 
       // 2. Trigger WhatsApp (Only if DB success)
       if (params.shopConfig?.is_active && params.clientPhone) {
-        // Run async (don't block return)
-        bookingsApi.sendNotification(params, bookingId).catch(console.error);
+        try {
+            // SANITIZAÇÃO DE TELEFONE (OBRIGATÓRIO)
+            let cleanPhone = params.clientPhone.replace(/\D/g, '');
+            if (!cleanPhone.startsWith('55') && cleanPhone.length >= 10) {
+                cleanPhone = '55' + cleanPhone;
+            }
+
+            console.log("Tentando enviar Whats para:", cleanPhone); // Debug
+
+            // Enviar Mensagem (Await explícito)
+            const success = await bookingsApi.sendNotification({
+                ...params,
+                clientPhone: cleanPhone
+            }, bookingId);
+
+            // 3. Salva Log no Painel
+            await supabase.from('whatsapp_logs').insert({
+                booking_id: bookingId,
+                phone_number: cleanPhone,
+                status: success ? 'sent' : 'failed',
+                message_body: 'Agendamento Confirmado',
+                client_id: params.userId !== 'guest_placeholder' ? params.userId : null,
+                created_at: new Date().toISOString()
+            });
+
+        } catch (wsError) {
+            console.error('Erro crítico no fluxo do WhatsApp:', wsError);
+            // Não falhar o agendamento se o whats falhar
+        }
       }
 
       return { success: true, id: bookingId };
@@ -55,14 +82,14 @@ export const bookingsApi = {
     }
   },
 
-  sendNotification: async (params: CreateBookingParams, bookingId: string) => {
+  sendNotification: async (params: CreateBookingParams, bookingId: string): Promise<boolean> => {
     const config = params.shopConfig;
     let msg = config.templates?.reminder || 'Olá {nome}, seu agendamento foi confirmado para {horario}.';
     
     msg = msg.replace('{nome}', params.clientName || 'Cliente');
     msg = msg.replace('{horario}', `${format(parseISO(params.date), 'dd/MM')} às ${params.time}`);
     
-    await sendWhatsApp({
+    return await sendWhatsApp({
         to: params.clientPhone!,
         message: msg,
         instanceId: config.instance_id,
