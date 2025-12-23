@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { GlassCard } from '../../components/GlassCard';
-import { Plus, Edit2, Archive, CheckCircle, XCircle, Star, Save, X } from 'lucide-react';
+import { Plus, Edit2, Archive, CheckCircle, XCircle, Star, Save, X, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface SaasPlan {
@@ -177,21 +177,30 @@ export default function AdminPlans() {
               ))}
             </ul>
 
-            <div className="flex items-center justify-between pt-4 border-t border-white/10">
-              <button
-                onClick={() => toggleStatus(plan)}
-                className={`text-sm flex items-center gap-1 ${plan.is_active ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'}`}
-              >
-                {plan.is_active ? <><Archive className="w-4 h-4" /> Arquivar</> : <><CheckCircle className="w-4 h-4" /> Ativar</>}
-              </button>
-              
-              <button
-                onClick={() => handleOpenModal(plan)}
-                className="text-sm flex items-center gap-1 text-[#7C3AED] hover:text-[#9F67FF]"
-              >
-                <Edit2 className="w-4 h-4" /> Editar
-              </button>
-            </div>
+              <div className="flex items-center justify-between pt-4 border-t border-white/10 gap-2">
+                <button
+                  onClick={() => toggleStatus(plan)}
+                  className={`text-sm flex items-center gap-1 ${plan.is_active ? 'text-yellow-400 hover:text-yellow-300' : 'text-green-400 hover:text-green-300'}`}
+                >
+                  {plan.is_active ? <><Archive className="w-4 h-4" /> Arquivar</> : <><CheckCircle className="w-4 h-4" /> Ativar</>}
+                </button>
+                
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleOpenModal(plan)}
+                    className="text-sm flex items-center gap-1 text-[#7C3AED] hover:text-[#9F67FF]"
+                  >
+                    <Edit2 className="w-4 h-4" /> Editar
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(plan)}
+                    className="text-sm flex items-center gap-1 text-red-500 hover:text-red-400"
+                  >
+                    <Trash2 className="w-4 h-4" /> Excluir
+                  </button>
+                </div>
+              </div>
           </GlassCard>
         ))}
       </div>
@@ -236,17 +245,40 @@ export default function AdminPlans() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Duração (Dias)</label>
+                  <label className="block text-sm text-gray-400 mb-1">Duração</label>
+                  <select
+                    value={['30', '90', '180', '365'].includes(formData.interval_days) ? formData.interval_days : 'custom'}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setFormData({
+                        ...formData, 
+                        interval_days: val === 'custom' ? '' : val
+                      });
+                    }}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-[#7C3AED] outline-none"
+                  >
+                    <option value="30">Mensal (30 dias)</option>
+                    <option value="90">Trimestral (90 dias)</option>
+                    <option value="180">Semestral (180 dias)</option>
+                    <option value="365">Anual (365 dias)</option>
+                    <option value="custom">Personalizado</option>
+                  </select>
+                </div>
+              </div>
+
+              {!['30', '90', '180', '365'].includes(formData.interval_days) && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Dias Personalizados</label>
                   <input
                     type="number"
                     required
                     value={formData.interval_days}
                     onChange={e => setFormData({...formData, interval_days: e.target.value})}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-[#7C3AED] outline-none"
-                    placeholder="30"
+                    placeholder="Ex: 45"
                   />
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Descrição Curta</label>
