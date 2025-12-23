@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useEstablishment } from '../contexts/EstablishmentContext';
 import { GlassCard } from '../components/GlassCard';
-import { Plus, Trash2, Calendar, User, Mail, Lock, Check, Clock, Copy, Power } from 'lucide-react';
+import { Plus, Trash2, Calendar, User, Mail, Lock, Check, Clock, Copy, Power, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Switch } from '@headlessui/react';
 
@@ -46,6 +46,8 @@ export default function AdminTeam() {
       password: ''
   });
   const [adding, setAdding] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Form State - Schedule
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>({});
@@ -292,6 +294,38 @@ export default function AdminTeam() {
               <GlassCard className="max-w-md w-full p-6">
                   <h2 className="text-xl font-bold text-white mb-6">Novo Barbeiro</h2>
                   <form onSubmit={handleAddBarber} className="space-y-4">
+                      {/* Photo Upload */}
+                      <div>
+                          <label className="block text-sm text-gray-400 mb-2">Foto de Perfil (Opcional)</label>
+                          <div className="flex items-center gap-4">
+                              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden relative group">
+                                  {photoFile ? (
+                                      <img src={URL.createObjectURL(photoFile)} alt="Preview" className="w-full h-full object-cover" />
+                                  ) : (
+                                      <User className="w-8 h-8 text-gray-500" />
+                                  )}
+                              </div>
+                              
+                              <div>
+                                <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 mb-1">
+                                    <Upload className="w-4 h-4" />
+                                    Selecionar Foto
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        className="hidden" 
+                                        onChange={e => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                setPhotoFile(e.target.files[0]);
+                                            }
+                                        }} 
+                                    />
+                                </label>
+                                <p className="text-xs text-gray-500">JPG ou PNG (Max 2MB)</p>
+                              </div>
+                          </div>
+                      </div>
+
                       <div>
                           <label className="block text-sm text-gray-400 mb-1">Nome</label>
                           <div className="relative">
@@ -336,8 +370,16 @@ export default function AdminTeam() {
                       </div>
                       <div className="flex gap-3 pt-4">
                           <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white">Cancelar</button>
-                          <button type="submit" disabled={adding} className="flex-1 py-3 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold">
-                              {adding ? 'Criando...' : 'Criar Conta'}
+                          <button type="submit" disabled={adding || uploadingPhoto} className="flex-1 py-3 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                              {uploadingPhoto ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" /> Enviando foto...
+                                </>
+                              ) : adding ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" /> Criando...
+                                </>
+                              ) : 'Criar Conta'}
                           </button>
                       </div>
                   </form>
