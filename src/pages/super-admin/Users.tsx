@@ -244,11 +244,27 @@ export default function SuperAdminUsers() {
                                     </td>
                                     <td className="p-4 text-gray-300">{user.email}</td>
                                     <td className="p-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getRoleBadgeColor(user.tipo || 'client')}`}>
-                                            {user.tipo === 'super_admin' ? 'Super Admin' : 
-                                             user.tipo === 'owner' ? 'Dono' : 
-                                             user.tipo === 'barber' ? 'Barbeiro' : 'Cliente'}
-                                        </span>
+                                        <select 
+                                            value={user.tipo || 'client'} 
+                                            onChange={async (e) => {
+                                                const newRole = e.target.value;
+                                                if (!window.confirm(`Mudar função de ${user.nome} para ${newRole}?`)) return;
+                                                try {
+                                                    await callAdminAction('update_profile', user.id, { 
+                                                        data: { tipo: newRole } 
+                                                    });
+                                                    // fetchData() is called inside callAdminAction
+                                                } catch (err) {
+                                                    // Error handled in callAdminAction
+                                                }
+                                            }}
+                                            className={`px-3 py-1 rounded-full text-xs font-bold border appearance-none cursor-pointer outline-none ${getRoleBadgeColor(user.tipo || 'client')} [&>option]:text-black`}
+                                        >
+                                            <option value="client">Cliente</option>
+                                            <option value="barber">Barbeiro</option>
+                                            <option value="owner">Dono</option>
+                                            <option value="super_admin">Super Admin</option>
+                                        </select>
                                     </td>
                                     <td className="p-4 text-gray-300">
                                         <div className="flex items-center gap-2">

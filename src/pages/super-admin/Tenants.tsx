@@ -240,7 +240,9 @@ export default function SuperAdminTenants() {
               name: newShop.name,
               slug: newShop.slug || newShop.name.toLowerCase().replace(/\s+/g, '-'),
               owner_id: userId,
-              phone: newShop.ownerPhone
+              phone: newShop.ownerPhone,
+              subscription_end_date: addDays(new Date(), 30).toISOString(),
+              subscription_plan: 'trial'
           });
 
           if (shopError) throw shopError;

@@ -65,16 +65,6 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
         
         let publicKey = propPublicKey || envKey;
 
-        // Force block known broken key if it matches exactly and provide clear error
-        // (Optional: Remove this block if you confirm the key IS valid but just misconfigured on MP side)
-        const BROKEN_KEY = 'TEST-19366606-25e2-4d7a-b152-7b02927951d4';
-        if (publicKey === BROKEN_KEY) {
-             console.warn('⚠️ Detected known invalid/expired Test Key. Blocking initialization.');
-             // We can either block it or let it fail. The user's log shows it fails with 404.
-             // Let's block it to show the UI error message instead of the console crash.
-             publicKey = null;
-        }
-        
         // DEBUG LOGGING
         console.log("MP Init Status:", publicKey ? "Key Found (" + publicKey.slice(0, 8) + "...)" : "Key Missing");
 

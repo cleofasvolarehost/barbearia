@@ -8,53 +8,32 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders, status: 200 })
   }
 
   try {
-    const { token, payer_email, plan_id, plan_type } = await req.json()
-    const targetPlanId = plan_id || plan_type; // Support both for backward compatibility or transition
+    const { token, payer_email, establishment_id, plan_id, issuer_id, payment_method_id, identification } = await req.json()
 
-    if (!targetPlanId) {
-        throw new Error('Missing plan_id');
-    }
+    if (!plan_id) throw new Error('Missing plan_id');
+    if (!establishment_id) throw new Error('Missing establishment_id');
 
-    // Initialize Supabase Client
+    // Initialize Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Fetch Plan from DB
+    // Fetch Plan
     const { data: plan, error: planError } = await supabase
         .from('saas_plans')
         .select('*')
-        .eq('id', targetPlanId)
+        .eq('id', plan_id)
         .single();
 
-    if (planError || !plan) {
-        throw new Error('Invalid plan or plan not found');
-    }
+    if (planError || !plan) throw new Error('Plan not found');
 
-    // Calculate Frequency
-    let frequency = 1;
-    let frequency_type = 'months';
-
-    if (plan.interval_days % 30 === 0) {
-        frequency = plan.interval_days / 30;
-        frequency_type = 'months';
-    } else {
-        frequency = plan.interval_days;
-        frequency_type = 'days';
-    }
-
-    const transaction_amount = Number(plan.price);
-    const reason = `Assinatura ${plan.name}`;
-
-    // 1. Try to fetch credentials from SaaS Settings (Dynamic)
+    // Get MP Access Token
     let mpAccessToken = '';
-    
     const { data: saasSettings } = await supabase
         .from('saas_settings')
         .select('setting_value')
@@ -64,58 +43,60 @@ serve(async (req) => {
     if (saasSettings?.setting_value) {
         mpAccessToken = saasSettings.setting_value;
     } else {
-        // 2. Fallback to Environment Variables
         mpAccessToken = Deno.env.get('SAAS_MP_ACCESS_TOKEN') || Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN') || '';
     }
 
-    if (!mpAccessToken) {
-        throw new Error('Server Config Error: Missing MP Access Token (SaaS)');
-    }
+    if (!mpAccessToken) throw new Error('Server Config Error: Missing MP Access Token');
 
-    // 1. Create Subscription (Preapproval)
-    // Documentation: https://www.mercadopago.com.br/developers/en/reference/subscriptions/_preapproval/post
-    
-    const body = {
-      payer_email: payer_email,
-      back_url: 'https://www.crdev.app/admin/subscription',
-      reason: reason,
-      external_reference: targetPlanId,
-      auto_recurring: {
-        frequency: frequency,
-        frequency_type: frequency_type,
-        transaction_amount: transaction_amount,
-        currency_id: 'BRL'
-      },
-      card_token_id: token,
-      status: 'authorized'
+    // Create Payment (Standard for all methods: Credit Card, Pix, Boleto)
+    const paymentBody = {
+        transaction_amount: Number(plan.price),
+        token: token, // Optional (only for cards)
+        description: `Assinatura ${plan.name} (${plan.interval_days} dias)`,
+        payment_method_id: payment_method_id,
+        issuer_id: issuer_id,
+        payer: {
+            email: payer_email,
+            identification: identification
+        },
+        metadata: {
+            type: 'saas_renewal',
+            establishment_id: establishment_id,
+            plan_id: plan_id,
+            plan_duration_days: plan.interval_days
+        },
+        notification_url: 'https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/mp-webhook'
     };
 
-    const response = await fetch('https://api.mercadopago.com/preapproval', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${mpAccessToken}`
-      },
-      body: JSON.stringify(body)
+    console.log('Creating Payment:', JSON.stringify(paymentBody));
+
+    const response = await fetch('https://api.mercadopago.com/v1/payments', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mpAccessToken}`,
+            'X-Idempotency-Key': crypto.randomUUID()
+        },
+        body: JSON.stringify(paymentBody)
     });
 
     const data = await response.json();
 
     if (!response.ok) {
         console.error('MP Error:', data);
-        throw new Error(data.message || 'Failed to create subscription at Mercado Pago');
+        throw new Error(data.message || 'Failed to create payment');
     }
 
     return new Response(
-      JSON.stringify(data),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify(data),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error: any) {
     console.error('Function Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ error: error.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }
 })
