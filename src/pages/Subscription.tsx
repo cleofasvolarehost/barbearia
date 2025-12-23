@@ -20,21 +20,20 @@ export default function Subscription() {
 
   const fetchPlans = async () => {
     try {
-      // Changed from 'saas_plans' to 'plans' based on new schema
+      // Fetch from 'saas_plans' (Single Source of Truth)
       const { data, error } = await supabase
-        .from('plans')
+        .from('saas_plans')
         .select('*')
-        .eq('active', true)
-        .order('price_cents', { ascending: true });
+        .eq('is_active', true)
+        .order('price', { ascending: true });
       
       if (error) throw error;
       
-      // Transform data to match UI expectations (price_cents -> price formatted)
+      // Transform data to match UI expectations
       const formattedPlans = (data || []).map(p => ({
           ...p,
-          price: (p.price_cents / 100).toFixed(2), // Convert cents to string "29.90"
-          interval_days: p.interval === 'month' ? 30 : 365,
-          features: ['Gestão de Agendamentos', 'Controle Financeiro', 'Suporte Prioritário'] // Mock features for now
+          price: Number(p.price).toFixed(2), // Ensure string format
+          // interval_days and features are already correct in saas_plans
       }));
 
       setPlans(formattedPlans);

@@ -20,7 +20,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
   // STRICT VALIDATION: Ensure plan and price exist
   if (!isOpen) return null;
 
-  const isValidPlan = plan && plan.id && plan.price_cents > 0;
+  const isValidPlan = plan && plan.id && Number(plan.price) > 0;
   
   if (!isValidPlan) {
       if (isOpen) {
@@ -36,7 +36,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
     try {
         if (!establishment || !user?.email) return;
 
-        console.log('Creating subscription with plan_id=', plan.id, 'price_cents=', plan.price_cents);
+        console.log('Creating subscription with plan_id=', plan.id, 'price=', plan.price);
 
         // Call Edge Function to create subscription
         const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
@@ -50,7 +50,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 payer_email: user.email,
                 establishment_id: establishment.id,
                 plan_id: plan.id, // Ensure this is definitely passed
-                price_cents: plan.price_cents, // Pass price for validation
+                // price is fetched from DB by plan_id in the edge function
                 issuer_id,
                 payment_method_id,
                 card_holder_name,
@@ -96,16 +96,18 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
 
             <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative">
                 
-                {/* Back / Change Plan Button */}
-                <button
-                    onClick={onClose}
-                    className="absolute top-6 left-6 text-sm text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
-                >
-                    <ArrowRight className="w-4 h-4 rotate-180" />
-                    Trocar Plano
-                </button>
+                {/* Back / Change Plan Button - Improved UX */}
+                <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10">
+                    <button
+                        onClick={onClose}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-sm font-medium text-gray-300 hover:text-white transition-all border border-white/5 hover:border-white/20 group"
+                    >
+                        <ArrowRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                        Trocar Plano
+                    </button>
+                </div>
 
-                <div className="text-center mb-8 mt-4">
+                <div className="text-center mb-8 mt-8">
                     <h2 className="text-2xl font-bold mb-2">Finalizar Assinatura</h2>
                     <p className="text-gray-400">
                         Plano <span className="text-[#7C3AED] font-bold">{plan.name}</span> - R$ {plan.price}

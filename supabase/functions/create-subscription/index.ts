@@ -19,23 +19,32 @@ serve(async (req) => {
     if (!plan_id) throw new Error('Missing plan_id');
     if (!establishment_id) throw new Error('Missing establishment_id');
 
-    // Initialize Supabase
+    // Initialize Supabase with Service Role Key (Bypass RLS)
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log('Fetching Plan:', plan_id);
 
     // 2. Fetch Plan from Database (Single Source of Truth)
+    // Using saas_plans table as per project convention (checked frontend Subscription.tsx)
     const { data: plan, error: planError } = await supabase
-        .from('plans') // NEW TABLE
+        .from('saas_plans') 
         .select('*')
         .eq('id', plan_id)
-        .eq('active', true)
+        .eq('is_active', true) // Using is_active as per saas_plans schema
         .single();
 
-    if (planError || !plan) {
-        console.error('Plan Fetch Error:', planError);
-        throw new Error('Invalid Plan or Plan not active');
+    if (planError) {
+        console.error('Plan Fetch Error (DB):', planError);
     }
+
+    if (!plan) {
+        console.error('Plan Not Found or Inactive. ID:', plan_id);
+        throw new Error(`Plan not found: ${plan_id}`);
+    }
+
+    console.log('Plan Found:', plan.name, 'Price:', plan.price);
 
     // 3. Get MP Access Token (Securely)
     let mpAccessToken = '';
@@ -56,13 +65,13 @@ serve(async (req) => {
     }
 
     // 4. Create Payment
-    // Convert price_cents (integer) to transaction_amount (float)
-    const transactionAmount = Number((plan.price_cents / 100).toFixed(2));
+    // Convert price (decimal) to transaction_amount (float)
+    const transactionAmount = Number(plan.price);
 
     const paymentBody = {
         transaction_amount: transactionAmount,
         token: token, 
-        description: `Assinatura ${plan.name} (${plan.interval})`,
+        description: `Assinatura ${plan.name} (${plan.interval_days} dias)`,
         payment_method_id: payment_method_id,
         issuer_id: issuer_id,
         payer: {
