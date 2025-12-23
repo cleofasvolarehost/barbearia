@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
-import { Search, Plus, MoreVertical, Phone, Mail, User, Check, X, Calendar } from 'lucide-react';
+import { Search, Plus, MoreVertical, Phone, Mail, User, Check, X, Calendar, Award, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useEstablishment } from '../contexts/EstablishmentContext';
@@ -17,6 +17,10 @@ interface Client {
   totalVisits: number;
   status: 'active' | 'inactive';
   avatarColor: string;
+  loyalty?: {
+    points: number;
+    hasReward: boolean;
+  };
 }
 
 export default function Clients() {
@@ -47,6 +51,7 @@ export default function Clients() {
     try {
       setLoading(true);
       
+      // Fetch churn analysis
       const { data, error } = await supabase
         .from('churn_analysis_view')
         .select('*')
@@ -54,12 +59,32 @@ export default function Clients() {
 
       if (error) throw error;
 
+      // Fetch loyalty cards separately (or join if possible, but separate is easier for now)
+      const { data: loyaltyCards } = await supabase
+        .from('loyalty_cards')
+        .select('user_id, points')
+        .eq('establishment_id', establishment?.id);
+
+      const loyaltyMap = new Map();
+      if (loyaltyCards) {
+          loyaltyCards.forEach((card: any) => {
+              loyaltyMap.set(card.user_id, card.points);
+          });
+      }
+
       const formattedClients: Client[] = (data || []).map((row: any) => {
         const lastVisitDate = parseISO(row.last_visit_date);
         const daysAgo = Math.floor((new Date().getTime() - lastVisitDate.getTime()) / (1000 * 60 * 60 * 24));
         
         const colors = ['#7C3AED', '#2DD4BF', '#F97316', '#3B82F6', '#10B981', '#EC4899'];
         const colorIndex = row.client_name ? row.client_name.charCodeAt(0) % colors.length : 0;
+
+        const points = loyaltyMap.get(row.client_id) || 0;
+        const totalCuts = 10;
+        // Logic: Points accumulate. Reward available every 10 points.
+        // Assuming points count *up* and don't reset until redeem (or logic handles it).
+        // Let's assume: hasReward if points >= 10.
+        const hasReward = points >= totalCuts;
 
         return {
           id: row.client_id,
@@ -69,7 +94,11 @@ export default function Clients() {
           lastVisit: formatDistanceToNow(lastVisitDate, { addSuffix: true, locale: ptBR }),
           totalVisits: row.total_visits,
           status: daysAgo <= 45 ? 'active' : 'inactive',
-          avatarColor: colors[colorIndex]
+          avatarColor: colors[colorIndex],
+          loyalty: {
+              points: points % totalCuts, // Show progress 0-9
+              hasReward: hasReward
+          }
         };
       });
 
@@ -145,6 +174,26 @@ export default function Clients() {
       } finally {
           setCreating(false);
       }
+  };
+
+  const handleRedeemReward = async (clientId: string) => {
+    if (!confirm('Confirmar resgate do prêmio? Isso descontará 10 pontos do cliente.')) return;
+
+    try {
+        const { error } = await supabase.rpc('redeem_loyalty_points', {
+            p_user_id: clientId,
+            p_establishment_id: establishment?.id,
+            p_points: 10
+        });
+
+        if (error) throw error;
+
+        toast.success('Prêmio resgatado com sucesso!');
+        fetchClients(); // Refresh list
+    } catch (error: any) {
+        console.error('Error redeeming:', error);
+        toast.error('Erro ao resgatar prêmio: ' + error.message);
+    }
   };
 
   const filteredClients = clients.filter(client => 
