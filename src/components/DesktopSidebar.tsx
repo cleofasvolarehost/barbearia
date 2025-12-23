@@ -60,7 +60,17 @@ export function DesktopSidebar({ onViewChange }: DesktopSidebarProps) {
 
   const filteredNavItems = allNavItems.filter(item => {
       if (!role) return false;
-      if (role === 'super_admin') return item.roles.includes('super_admin');
+      
+      // Special handling for Super Admin navigating between modes
+      if (role === 'super_admin') {
+          // If in God Mode area, show God Mode items
+          if (activeView.startsWith('/super-admin')) {
+              return item.roles.includes('super_admin');
+          } 
+          // If in Shop/Admin area, show Owner items (Super Admin has full access)
+          return item.roles.includes('owner');
+      }
+
       return item.roles.includes(role);
   });
 
