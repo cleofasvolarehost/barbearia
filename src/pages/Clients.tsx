@@ -321,6 +321,14 @@ export default function Clients() {
                           <Phone className="w-3 h-3 flex-shrink-0" />
                           {client.phone}
                         </span>
+                        
+                        {/* Loyalty Status (Mobile/Desktop) */}
+                        <div className="flex items-center gap-2 mt-1 md:mt-0">
+                           <Award className={`w-3 h-3 ${client.loyalty?.hasReward ? 'text-yellow-400' : 'text-emerald-400'}`} />
+                           <span className={`${client.loyalty?.hasReward ? 'text-yellow-400 font-bold' : 'text-emerald-400'}`}>
+                             {client.loyalty?.hasReward ? 'Prêmio Disponível!' : `${client.loyalty?.points || 0}/10 Pontos`}
+                           </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -339,6 +347,17 @@ export default function Clients() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {/* Redeem Button */}
+                        {client.loyalty?.hasReward && (
+                            <button 
+                                onClick={() => handleRedeemReward(client.id)}
+                                className="px-3 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 rounded-lg text-xs font-bold hover:bg-yellow-500/30 transition-colors flex items-center gap-1"
+                            >
+                                <Gift className="w-3 h-3" />
+                                Resgatar
+                            </button>
+                        )}
+                        
                         {/* Desktop Status Badge */}
                         <div className={`hidden md:block px-3 py-1 rounded-full text-xs ${
                         client.status === 'active' 

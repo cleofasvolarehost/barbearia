@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, Menu, CalendarClock, LayoutDashboard, Settings, Receipt, Megaphone, Shield, Activity, Crown, Palette, MessageCircle, Building2 } from 'lucide-react';
+import { Home, Calendar, Users, DollarSign, Menu, CalendarClock, LayoutDashboard, Settings, Receipt, Megaphone, Shield, Activity, Crown, Palette, MessageCircle, Building2, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
