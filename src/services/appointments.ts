@@ -13,6 +13,10 @@ export const appointmentsService = {
         client:profiles(id, full_name, phone, avatar_url)
       `, { count: 'exact' });
 
+    if (filters.barbershop_id) {
+      query = query.eq('barbershop_id', filters.barbershop_id);
+    }
+
     if (filters.dateRange) {
       query = query
         .gte('starts_at', filters.dateRange.start)
