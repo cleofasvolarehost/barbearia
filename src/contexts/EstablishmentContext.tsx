@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Establishment } from '../types/database';
@@ -85,8 +85,14 @@ export function EstablishmentProvider({ children }: { children: ReactNode }) {
     }
   }, [loading, user?.id, establishment, location.pathname, navigate]);
 
+  const value = useMemo(() => ({
+    establishment,
+    loading,
+    refreshEstablishment: fetchEstablishment
+  }), [establishment, loading]);
+
   return (
-    <EstablishmentContext.Provider value={{ establishment, loading, refreshEstablishment: fetchEstablishment }}>
+    <EstablishmentContext.Provider value={value}>
       {children}
     </EstablishmentContext.Provider>
   );

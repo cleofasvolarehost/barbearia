@@ -1,9 +1,10 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { GlassCard } from './GlassCard';
 import { Users, TrendingUp, Clock, DollarSign, RefreshCw, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, getHours } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import { useEstablishment } from '../contexts/EstablishmentContext';
 
@@ -67,7 +68,7 @@ export function GodModeDashboard() {
   const [professionals, setProfessionals] = useState<ProfessionalStatus[]>([]);
 
   // Analytics State
-  const [heatmapData] = useState(generateHeatmapData());
+  const [heatmapData, setHeatmapData] = useState<any[]>([]);
   const maxRevenue = Math.max(...staffLeaderboardData.map(s => s.revenue));
 
   // --- Helpers for Analytics Visuals ---
@@ -94,12 +95,19 @@ export function GodModeDashboard() {
   };
   // -------------------------------------
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!establishment) return;
 
     try {
       setLoading(true);
-      const today = format(new Date(), 'yyyy-MM-dd');
+      const today = new Date();
+      const todayStr = format(today, 'yyyy-MM-dd');
+      
+      // Calculate Week Range for Heatmap
+      const startWeek = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
+      const endWeek = endOfWeek(today, { weekStartsOn: 0 });
+      const startWeekStr = format(startWeek, 'yyyy-MM-dd');
+      const endWeekStr = format(endWeek, 'yyyy-MM-dd');
 
       // 1. Fetch Today's Appointments
       const { data: todayAppts, error: apptsError } = await supabase
@@ -114,22 +122,21 @@ export function GodModeDashboard() {
           servicos:agendamentos_servicos(servicos(nome))
         `)
         .eq('establishment_id', establishment.id)
-        .eq('data', today)
+        .eq('data', todayStr)
         .order('horario');
 
       if (apptsError) throw apptsError;
 
-      // 2. Fetch Total Clients (Approximation: Users who have appointments here or just generic client count?)
-      // For SaaS isolation, we ideally link clients to establishments, but for now let's just count global clients or maybe clients who booked here?
-      // Since we don't have establishment_id on users, let's just count distinct users from appointments for this establishment
-      // But query is expensive. Let's keep it simple: count all clients for now or skip.
-      // Let's count unique clients in appointments for this establishment.
-      const { count: clientsCount } = await supabase
-        .from('agendamentos') // Use agendamentos to count distinct clients
-        .select('usuario_id', { count: 'exact', head: true })
-        .eq('establishment_id', establishment.id);
-        // Note: distinct count in supabase is tricky without RPC. This just counts appointments.
-        // Let's stick to simple appointment count for now.
+      // 2. Fetch Week Appointments for Heatmap
+      const { data: weekAppts, error: weekError } = await supabase
+        .from('agendamentos')
+        .select('data, horario, status')
+        .eq('establishment_id', establishment.id)
+        .gte('data', startWeekStr)
+        .lte('data', endWeekStr)
+        .neq('status', 'cancelado');
+        
+      if (weekError) throw weekError;
 
       // 3. Fetch Barbers
       const { data: barbersData, error: barbersError } = await supabase
@@ -139,12 +146,14 @@ export function GodModeDashboard() {
 
       if (barbersError) throw barbersError;
 
-      // Process Data
+      // --- PROCESS DATA ---
+
+      // KPI Stats
       const appts = todayAppts || [];
       const revenue = appts.reduce((acc, curr) => curr.status !== 'cancelado' ? acc + (curr.preco_total || 0) : acc, 0);
       const avgTicket = appts.length > 0 ? revenue / appts.length : 0;
 
-      // Calculate Professional Status
+      // Professional Status
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
@@ -155,16 +164,12 @@ export function GodModeDashboard() {
             if (!a.horario) return false;
             const [h, m] = a.horario.split(':').map(Number);
             const start = h * 60 + m;
-            const end = start + 45; // Approx duration
+            const end = start + 45; // Approx
             
-            // Safe access to barber id
             const barberId = typeof a.barbeiro === 'object' && a.barbeiro ? (a.barbeiro as any).id : null;
-            
             return currentTimeValue >= start && currentTimeValue < end && barberId === b.id && a.status !== 'cancelado';
         });
-        
         const colors = ['#7C3AED', '#2DD4BF', '#3B82F6', '#F97316', '#EC4899'];
-
         return {
             id: b.id,
             name: b.nome,
@@ -173,24 +178,52 @@ export function GodModeDashboard() {
         };
       });
 
-      // Calculate Occupancy Rate (Simple approximation)
-      // Total slots = Barbers * Hours Open * 2 (assuming 30min slots)
-      // Open 9-19 = 10 hours. 10 * 2 = 20 slots per barber.
-      // Total slots = 20 * Barbers.
-      // Booked = appts.length.
-      const totalSlots = (barbersData?.length || 0) * 20; 
-      const occupancyRate = totalSlots > 0 ? (appts.length / totalSlots) * 100 : 0;
+      // Heatmap Calculation
+      const days = eachDayOfInterval({ start: startWeek, end: endWeek });
+      const hours = ['09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
+      const totalBarbers = barbersData?.length || 1;
 
+      const heatmap = days.map(day => {
+          const dayStr = format(day, 'yyyy-MM-dd');
+          const dayName = format(day, 'EEE', { locale: ptBR }).replace('.', '');
+          const dayAppts = weekAppts?.filter(a => a.data === dayStr) || [];
+
+          const slots = hours.map(hour => {
+              const hourInt = parseInt(hour);
+              // Count appointments in this hour
+              const count = dayAppts.filter(a => {
+                  const h = parseInt(a.horario.split(':')[0]);
+                  return h === hourInt;
+              }).length;
+
+              // Max capacity per hour = barbers * 2 (assuming 2 slots/hour)
+              const capacity = totalBarbers * 2;
+              let occupancy = capacity > 0 ? Math.round((count / capacity) * 100) : 0;
+              if (occupancy > 100) occupancy = 100;
+
+              return {
+                  hour: `${hour}h`,
+                  occupancy
+              };
+          });
+
+          return {
+              day: dayName.charAt(0).toUpperCase() + dayName.slice(1),
+              slots
+          };
+      });
+
+      setHeatmapData(heatmap);
       setProfessionals(proStatus);
       setAppointments(appts);
       setStats({
         todayRevenue: revenue,
         todayAppointments: appts.length,
-        totalClients: clientsCount || 0,
+        totalClients: 0,
         avgTicket: avgTicket,
         busyCount: proStatus.filter(p => p.status === 'busy').length,
         freeCount: proStatus.filter(p => p.status === 'free').length,
-        occupancyRate: Math.round(occupancyRate)
+        occupancyRate: 0 
       });
 
     } catch (error) {
@@ -199,7 +232,7 @@ export function GodModeDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [establishment]);
 
   useEffect(() => {
     if (establishment) {
@@ -209,7 +242,7 @@ export function GodModeDashboard() {
     } else if (!establishmentLoading) {
         setLoading(false);
     }
-  }, [establishment, establishmentLoading]);
+  }, [establishment, establishmentLoading, fetchData]);
 
   if (establishmentLoading || (loading && establishment)) return <div className="p-8 text-white">Carregando dados...</div>;
 
