@@ -86,7 +86,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 </div>
 
                 <MercadoPagoBrick 
-                    amount={plan.price || 0}
+                    amount={Number(plan.price) || 0}
                     email={user?.email || ''}
                     onSuccess={handleBrickSuccess}
                     onError={handleBrickError}
