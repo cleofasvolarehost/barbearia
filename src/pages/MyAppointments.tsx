@@ -215,18 +215,37 @@ export default function MyAppointments() {
                 <p className="text-gray-400">Nenhum agendamento encontrado.</p>
                 {activeTab === 'upcoming' && (
                     <button 
-                        onClick={() => {
-                            // Try to find slug from any appointment in history
+                        onClick={async () => {
+                            // 1. Try to find slug from any appointment in history
                             // @ts-ignore
-                            const slug = appointments.find(a => a.barbeiro?.establishment?.slug)?.barbeiro?.establishment?.slug;
+                            let slug = appointments.find(a => a.barbeiro?.establishment?.slug)?.barbeiro?.establishment?.slug;
                             
                             if (slug) {
                                 navigate(`/${slug}`);
-                            } else {
-                                // Fallback: If we can't find a slug, maybe go to a generic search or landing
-                                // ideally we shouldn't show this button if we don't know the shop
-                                toast.error('Você ainda não tem histórico em nenhuma barbearia.');
+                                return;
                             }
+
+                            // 2. Try User Metadata (if owner/barber/invited client)
+                            const estId = user?.user_metadata?.establishment_id;
+                            if (estId) {
+                                try {
+                                    const { data } = await supabase
+                                        .from('establishments')
+                                        .select('slug')
+                                        .eq('id', estId)
+                                        .single();
+                                    
+                                    if (data?.slug) {
+                                        navigate(`/${data.slug}`);
+                                        return;
+                                    }
+                                } catch (err) {
+                                    console.error('Error fetching establishment slug:', err);
+                                }
+                            }
+
+                            // 3. Fallback
+                            toast.error('Você ainda não tem histórico em nenhuma barbearia.');
                         }}
                         className="mt-4 px-6 py-2 bg-[#2DD4BF] text-black font-bold rounded-full hover:opacity-90 transition-opacity"
                     >
