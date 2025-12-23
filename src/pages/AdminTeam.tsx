@@ -81,14 +81,37 @@ export default function AdminTeam() {
       setAdding(true);
 
       try {
-        // 1. Call Edge Function to Create User & Profile
+        let foto_url = undefined;
+
+        // 1. Upload Photo if selected
+        if (photoFile) {
+            setUploadingPhoto(true);
+            const fileExt = photoFile.name.split('.').pop();
+            const fileName = `${establishment.id}/barbers/${Date.now()}.${fileExt}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('shop-assets')
+                .upload(fileName, photoFile);
+            
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('shop-assets')
+                .getPublicUrl(fileName);
+            
+            foto_url = publicUrl;
+            setUploadingPhoto(false);
+        }
+
+        // 2. Call Edge Function to Create User & Profile
         const { data, error } = await supabase.functions.invoke('create-user', {
             body: {
                 email: newBarber.email,
                 password: newBarber.password,
                 name: newBarber.name,
                 establishment_id: establishment.id,
-                tipo: 'barber'
+                tipo: 'barber',
+                foto_url
             }
         });
 
@@ -98,6 +121,7 @@ export default function AdminTeam() {
         toast.success('Barbeiro cadastrado com sucesso!');
         setIsAddModalOpen(false);
         setNewBarber({ name: '', email: '', password: '' });
+        setPhotoFile(null);
         fetchTeam();
 
       } catch (error: any) {
@@ -105,6 +129,7 @@ export default function AdminTeam() {
           toast.error(error.message || 'Erro ao adicionar barbeiro');
       } finally {
           setAdding(false);
+          setUploadingPhoto(false);
       }
   };
 

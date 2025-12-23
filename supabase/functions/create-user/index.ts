@@ -12,6 +12,7 @@ interface CreateUserRequest {
   name: string;
   establishment_id: string;
   tipo: 'barber' | 'manager' | 'receptionist';
+  foto_url?: string;
 }
 
 serve(async (req) => {
@@ -92,6 +93,7 @@ serve(async (req) => {
             establishment_id: establishment_id,
             nome: name,
             ativo: true,
+            foto_url: foto_url || null,
             // Default config if needed, but DB defaults handle it
         });
 
