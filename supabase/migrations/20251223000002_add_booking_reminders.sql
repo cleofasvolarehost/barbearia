@@ -5,8 +5,9 @@ ALTER TABLE public.whatsapp_config
   ADD COLUMN IF NOT EXISTS api_url TEXT;
 
 DROP FUNCTION IF EXISTS create_booking(DATE, TIME, UUID, UUID, UUID, DECIMAL);
+DROP FUNCTION IF EXISTS create_booking(DATE, TIME, UUID, UUID, UUID, DECIMAL, TEXT, TEXT);
 
-CREATE OR REPLACE FUNCTION create_booking(
+CREATE OR REPLACE FUNCTION create_booking_v2(
     p_data DATE,
     p_horario TIME,
     p_barbeiro_id UUID,

@@ -135,7 +135,7 @@ export const appointmentsService = {
     const timeStr = formatISO(dateObj, { representation: 'time' }).substring(0, 5);
 
     // Use RPC to ensure consistency
-    const { data, error } = await supabase.rpc('create_booking', {
+    const { data, error } = await supabase.rpc('create_booking_v2', {
       p_data: dateStr,
       p_horario: timeStr + ':00',
       p_barbeiro_id: payload.barber_id,

@@ -57,7 +57,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceRole);
 
-    const { data: bookingResult, error: bookingError } = await supabase.rpc('create_booking', {
+    const { data: bookingResult, error: bookingError } = await supabase.rpc('create_booking_v2', {
       p_data: date,
       p_horario: `${time}:00`,
       p_barbeiro_id: barberId,
