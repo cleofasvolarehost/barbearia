@@ -84,7 +84,7 @@ serve(async (req) => {
             plan_id: plan_id,
             plan_name: plan.name
         },
-        notification_url: 'https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/mp-webhook'
+        notification_url: `${supabaseUrl}/functions/v1/mp-webhook`
     };
 
     console.log('Creating Payment for Plan:', plan.name, 'Amount:', transactionAmount);
