@@ -39,6 +39,7 @@ import SuperAdminPlans from "./pages/super-admin/Plans";
 import SuperAdminSystem from "./pages/super-admin/System";
 import SuperAdminUsers from "./pages/super-admin/Users";
 import Subscription from "./pages/Subscription";
+import FastCheckoutPage from "./pages/checkout/FastCheckoutPage";
 import { useAuth } from "./hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
