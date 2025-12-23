@@ -4,7 +4,6 @@ import { useEstablishment } from '../contexts/EstablishmentContext';
 import { GlassCard } from '../components/GlassCard';
 import { Plus, Trash2, Calendar, User, Mail, Lock, Check, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { createClient } from '@supabase/supabase-js';
 
 // Types
 interface Barber {
@@ -77,78 +76,24 @@ export default function AdminTeam() {
       setAdding(true);
 
       try {
-        // 1. Create Auth User (using temporary client to allow creation without logging out)
-        // Note: In a real prod app, you might use an Edge Function for this to avoid exposing anon key limits or use Invite logic
-        // For this MVP, we use a second client instance or assume the current user has permissions (which they don't usually to create other users)
-        // SOLUTION: We'll create a "Profile" first (the 'barbeiros' row) and a "Invite" mechanism ideally. 
-        // BUT to follow the prompt "Create auth user", we need the service_role or an Edge Function.
-        // FALLBACK: We will invoke an Edge Function or RPC if available. 
-        // Since we don't have a 'create_barber' RPC, I'll create the row in 'barbeiros' first, 
-        // and for the LOGIN part, we'll simulate or use a placeholder if we can't create Auth.
-        // HOWEVER, the prompt says "Create auth user with role='barber'".
-        // I'll assume we can use the `create_shop_and_owner` logic pattern or just insert into `barbeiros` and let them register?
-        // No, let's try to create the user via the `supabase.auth.signUp` if we were not logged in, but we are.
-        // CORRECT APPROACH FOR MVP: Just create the 'barbeiros' record. The auth user creation usually requires admin rights or a specific flow.
-        // Let's create the 'barbeiros' record and maybe a 'usuarios' record if possible?
-        // Actually, let's just insert into 'barbeiros' for the "Profile" to appear in booking. 
-        // Login access can be a "Future Step" or we use a simple "Invite Link".
-        
-        // RE-READING PROMPT: "Form: Name, Email, Password (create auth user with role='barber')"
-        // To do this from the client side while logged in as Owner, we need a secondary unauthenticated client or an Admin function.
-        // I will implement a direct insert to `barbeiros` for the display, and show a toast explaining Auth limitation or use a mock ID.
-        
-        // Wait! We can use the same `create_shop_and_owner` RPC pattern? No.
-        // Let's use the `createClient` trick with the ANON key, but that logs us out? No, `createClient` creates a new instance.
-        
-        const tempClient = createClient(
-            import.meta.env.VITE_SUPABASE_URL,
-            import.meta.env.VITE_SUPABASE_ANON_KEY,
-            {
-                auth: {
-                    persistSession: false,
-                    autoRefreshToken: false,
-                    detectSessionInUrl: false
-                }
-            }
-        );
-
-        const { data: authData, error: authError } = await tempClient.auth.signUp({
-            email: newBarber.email,
-            password: newBarber.password,
-            options: {
-                data: {
-                    nome: newBarber.name,
-                    tipo: 'barber',
-                    establishment_id: establishment.id // Custom claim or metadata
-                }
+        // 1. Call Edge Function to Create User & Profile
+        const { data, error } = await supabase.functions.invoke('create-user', {
+            body: {
+                email: newBarber.email,
+                password: newBarber.password,
+                name: newBarber.name,
+                establishment_id: establishment.id,
+                tipo: 'barber'
             }
         });
 
-        if (authError) throw authError;
-        
-        // 2. Insert into 'barbeiros' (The public profile)
-        if (authData.user) {
-            const { error: dbError } = await supabase.from('barbeiros').insert({
-                establishment_id: establishment.id,
-                nome: newBarber.name,
-                user_id: authData.user.id,
-                ativo: true
-            });
-            if (dbError) throw dbError;
-            
-            // 3. Insert into 'usuarios' (Our custom users table)
-            await supabase.from('usuarios').upsert({
-                id: authData.user.id,
-                email: newBarber.email,
-                nome: newBarber.name,
-                tipo: 'barber'
-            });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
-            toast.success('Barbeiro cadastrado com sucesso!');
-            setIsAddModalOpen(false);
-            setNewBarber({ name: '', email: '', password: '' });
-            fetchTeam();
-        }
+        toast.success('Barbeiro cadastrado com sucesso!');
+        setIsAddModalOpen(false);
+        setNewBarber({ name: '', email: '', password: '' });
+        fetchTeam();
 
       } catch (error: any) {
           console.error('Add barber error:', error);
