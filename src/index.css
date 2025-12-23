@@ -1,0 +1,28 @@
+@import './styles/fonts.css';
+@import './styles/theme.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased bg-background text-foreground font-sans;
+  }
+}
+
+/* Force hide Trae Badge */
+[id*="trae-badge"], 
+[class*="trae-badge"],
+div:has(> a[href*="trae.ai"]),
+#trae-solo-badge,
+a[href*="trae"], 
+div[class*="trae"], 
+[data-trae], 
+#trae-badge, 
+.trae-badge {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
+}
