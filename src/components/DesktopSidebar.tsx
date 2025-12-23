@@ -54,6 +54,7 @@ export function DesktopSidebar({ onViewChange }: DesktopSidebarProps) {
     { id: '/super-admin/dashboard', icon: LayoutDashboard, label: 'Visão Geral', roles: ['super_admin'] },
     { id: '/super-admin/tenants', icon: Building2, label: 'Barbearias', roles: ['super_admin'] },
     { id: '/super-admin/subscriptions', icon: Receipt, label: 'Assinaturas', roles: ['super_admin'] },
+    { id: '/super-admin/plans', icon: Receipt, label: 'Planos SaaS', roles: ['super_admin'] },
     { id: '/super-admin/gateways', icon: Shield, label: 'Gateways', roles: ['super_admin'] },
     { id: '/super-admin/system', icon: Activity, label: 'Sistema', roles: ['super_admin'] },
   ];

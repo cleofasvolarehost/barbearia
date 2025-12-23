@@ -294,8 +294,8 @@ export default function SuperAdminUsers() {
                                                 <button onClick={() => setShowEditModal(user)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
                                                     <Edit className="w-4 h-4 text-blue-400" /> Editar Dados
                                                 </button>
-                                                <button onClick={() => handleSuspend(user.id, false)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
-                                                    <Ban className="w-4 h-4 text-orange-400" /> Suspender
+                                                <button onClick={() => handleSuspend(user.id, user.banned)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
+                                                    <Ban className="w-4 h-4 text-orange-400" /> {user.banned ? 'Ativar' : 'Suspender'}
                                                 </button>
                                             </div>
                                         )}
