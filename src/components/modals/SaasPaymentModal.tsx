@@ -169,7 +169,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505]/95 backdrop-blur-xl p-4 overflow-y-auto">
-        <div className="w-full max-w-md relative my-8">
+        <div className="w-full max-w-lg relative my-8">
             <div className="absolute -inset-10 bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.25),_transparent_55%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.22),_transparent_55%)] blur-2xl" />
             <div className="bg-[#0B0B0F] border border-white/10 rounded-[32px] shadow-[0_0_60px_rgba(124,58,237,0.22)] relative flex flex-col w-full overflow-hidden min-h-[620px]">
                 <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.18),_transparent_50%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.18),_transparent_45%)]" />
@@ -197,11 +197,8 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                     >
-                        <p className="text-xs uppercase tracking-[0.3em] text-[#10B981] font-semibold mb-2">
-                            Assinatura Premium
-                        </p>
-                        <h1 className="text-3xl font-black mb-1 text-white">{pixData ? 'Pagamento via Pix' : 'Finalizar Assinatura'}</h1>
-                        <p className="text-sm text-gray-400">Conclua o pagamento para liberar todos os recursos.</p>
+                        <h1 className="text-3xl font-black mb-2 text-white">{pixData ? 'Pagamento via Pix' : 'Finalizar Assinatura'}</h1>
+                        <p className="text-sm text-gray-400">Revise seu plano e escolha a melhor forma de pagamento.</p>
                     </motion.div>
                 </div>
 
@@ -217,11 +214,12 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                         className="mx-6 mb-6"
                     >
                         <div className="p-5 rounded-3xl bg-gradient-to-br from-white/10 via-white/[0.04] to-white/[0.02] border border-white/20 backdrop-blur-xl shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center justify-between gap-4 mb-4">
                                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#10B981] flex items-center justify-center flex-shrink-0 shadow-[0_0_30px_rgba(124,58,237,0.4)]">
                                     <Crown className="w-7 h-7 text-white" />
                                 </div>
                                 <div className="flex-1">
+                                    <p className="text-xs uppercase tracking-[0.3em] text-[#10B981] font-semibold mb-1">Resumo do plano</p>
                                     <h3 className="font-black text-lg text-white mb-1">{plan.name}</h3>
                                     <p className="text-sm text-gray-400">Cobrado mensalmente</p>
                                 </div>
@@ -231,6 +229,10 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                     </p>
                                     <p className="text-xs text-gray-500">/mês</p>
                                 </div>
+                            </div>
+                            <div className="flex items-center justify-between text-sm text-gray-300 pt-4 border-t border-white/10">
+                                <span>Total hoje</span>
+                                <span className="font-bold text-white">R$ {Number(plan.price).toFixed(2)}</span>
                             </div>
                         </div>
                     </motion.div>
@@ -316,7 +318,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                             {/* Payment Method Selection */}
                             <div className="px-6 flex-1">
                                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">
-                                    Escolha a forma de pagamento
+                                    Forma de pagamento
                                 </h3>
                                 <div className="space-y-3">
                                     {paymentMethodsList.map((method, index) => (
