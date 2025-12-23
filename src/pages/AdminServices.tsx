@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useEstablishment } from '../contexts/EstablishmentContext';
 import { useAuth } from '../hooks/useAuth';
 import { GlassCard } from '../components/GlassCard';
-import { Plus, Edit, Trash2, Wand2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Wand2, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Service } from '../types/database';
 
@@ -24,6 +24,10 @@ export default function AdminServices() {
     categoria: 'Cabelo'
   });
 
+  const [categories, setCategories] = useState<string[]>(['Cabelo', 'Barba', 'Combo', 'Química', 'Acabamento', 'Outros']);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
   const fetchServices = async () => {
     if (!establishment) return;
     try {
@@ -36,6 +40,11 @@ export default function AdminServices() {
 
       if (error) throw error;
       setServices(data || []);
+      
+      // Update categories from establishment if available
+      if (establishment.service_categories && establishment.service_categories.length > 0) {
+          setCategories(establishment.service_categories);
+      }
     } catch (error) {
       console.error('Error fetching services:', error);
       toast.error('Erro ao carregar serviços.');
@@ -125,6 +134,35 @@ export default function AdminServices() {
       fetchServices();
     } catch (error) {
       toast.error('Erro ao adicionar serviços padrão.');
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    if (categories.includes(newCategoryName.trim())) {
+        toast.error('Categoria já existe!');
+        return;
+    }
+
+    const updatedCategories = [...categories, newCategoryName.trim()];
+    
+    try {
+        const { error } = await supabase
+            .from('establishments')
+            .update({ service_categories: updatedCategories })
+            .eq('id', establishment?.id);
+
+        if (error) throw error;
+        
+        setCategories(updatedCategories);
+        setFormData({ ...formData, categoria: newCategoryName.trim() });
+        setIsAddingCategory(false);
+        setNewCategoryName('');
+        toast.success('Categoria adicionada!');
+        
+        // Refresh establishment context if possible, or just local state is enough for now
+    } catch (error) {
+        toast.error('Erro ao salvar categoria');
     }
   };
 
@@ -246,18 +284,51 @@ export default function AdminServices() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Categoria</label>
-                <select
-                  value={formData.categoria}
-                  onChange={e => setFormData({...formData, categoria: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-[#7C3AED] [&>option]:bg-[#121212]"
-                >
-                  <option value="Cabelo">Cabelo</option>
-                  <option value="Barba">Barba</option>
-                  <option value="Combo">Combo</option>
-                  <option value="Química">Química</option>
-                  <option value="Acabamento">Acabamento</option>
-                  <option value="Outros">Outros</option>
-                </select>
+                {isAddingCategory ? (
+                    <div className="flex gap-2">
+                        <input 
+                            autoFocus
+                            value={newCategoryName}
+                            onChange={e => setNewCategoryName(e.target.value)}
+                            placeholder="Nome da nova categoria"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-[#7C3AED]"
+                        />
+                        <button 
+                            type="button"
+                            onClick={handleAddCategory}
+                            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-3 py-2 rounded-xl font-bold transition-colors"
+                        >
+                            <Check className="w-5 h-5" />
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setIsAddingCategory(false)}
+                            className="bg-white/5 hover:bg-white/10 text-white px-3 py-2 rounded-xl font-bold transition-colors"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex gap-2">
+                        <select
+                        value={formData.categoria}
+                        onChange={e => setFormData({...formData, categoria: e.target.value})}
+                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-[#7C3AED] [&>option]:bg-[#121212]"
+                        >
+                        {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                        </select>
+                        <button 
+                            type="button"
+                            onClick={() => setIsAddingCategory(true)}
+                            title="Nova Categoria"
+                            className="bg-white/5 hover:bg-white/10 text-white px-3 py-2 rounded-xl font-bold transition-colors border border-white/10"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Descrição</label>

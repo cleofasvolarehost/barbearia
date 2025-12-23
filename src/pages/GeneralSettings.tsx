@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useEstablishment } from '../contexts/EstablishmentContext';
 import { GlassCard } from '../components/GlassCard';
-import { Save, Clock, Phone, Store, Loader2 } from 'lucide-react';
+import { Save, Clock, Phone, Store, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function GeneralSettings() {
@@ -93,15 +93,24 @@ export default function GeneralSettings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm text-gray-400 mb-2">Link da Barbearia (Slug)</label>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-                <span className="text-gray-500 text-sm">{window.location.host}/</span>
-                <input 
-                  type="text"
-                  value={formData.slug}
-                  onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})}
-                  className="flex-1 bg-transparent border-none text-white focus:ring-0 outline-none p-0 font-bold"
-                  placeholder="minha-barbearia"
-                />
+              <div className="flex gap-2">
+                <div className="flex-1 flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                    <span className="text-gray-500 text-sm">{window.location.host}/</span>
+                    <input 
+                    type="text"
+                    value={formData.slug}
+                    onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})}
+                    className="flex-1 bg-transparent border-none text-white focus:ring-0 outline-none p-0 font-bold"
+                    placeholder="minha-barbearia"
+                    />
+                </div>
+                <button 
+                    onClick={() => window.open(`${window.location.protocol}//${window.location.host}/${formData.slug}`, '_blank')}
+                    className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors text-gray-400 hover:text-white"
+                    title="Visualizar Barbearia"
+                >
+                    <ExternalLink className="w-5 h-5" />
+                </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">Este é o link que seus clientes usarão para agendar.</p>
             </div>
