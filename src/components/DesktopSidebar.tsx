@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, Settings, LogOut, Zap, Megaphone, MessageCircle, Shield, LayoutDashboard, Building2, Receipt, Activity, Crown, Palette } from 'lucide-react';
+import { Home, Calendar, Users, DollarSign, Settings, LogOut, Zap, Megaphone, MessageCircle, Shield, LayoutDashboard, Building2, Receipt, Activity, Crown, Palette, Store } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GlassCard } from './GlassCard';
 import { Link, useLocation } from 'react-router-dom';
@@ -80,6 +80,21 @@ export function DesktopSidebar({ onViewChange }: DesktopSidebarProps) {
           </div>
         </div>
       </div>
+
+      {/* Teleport for Super Admin */}
+      {role === 'super_admin' && (
+          <div className="px-4 mb-6">
+              {activeView.startsWith('/super-admin') ? (
+                  <Link to="/admin/dashboard" className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition-opacity">
+                      <Store className="w-4 h-4" /> Ir para Minha Loja
+                  </Link>
+              ) : (
+                  <Link to="/super-admin/dashboard" className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-600 to-orange-600 text-white text-xs font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition-opacity">
+                      <Crown className="w-4 h-4" /> Voltar ao God Mode
+                  </Link>
+              )}
+          </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 space-y-2">
