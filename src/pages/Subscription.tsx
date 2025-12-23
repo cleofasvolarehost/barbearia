@@ -5,8 +5,8 @@ import { useEstablishment } from '../contexts/EstablishmentContext';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
-import { SubscriptionController } from '../components/subscription/SubscriptionController';
 import { Tab } from '../components/modals/SubscriptionManagerModal';
+import { SubscriptionController } from '../components/subscription/SubscriptionController';
 
 export default function Subscription() {
   const { establishment, refreshEstablishment } = useEstablishment();
