@@ -50,9 +50,24 @@ serve(async (req) => {
     const transaction_amount = Number(plan.price);
     const reason = `Assinatura ${plan.name}`;
 
-    const mpAccessToken = Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN');
+    // 1. Try to fetch credentials from SaaS Settings (Dynamic)
+    let mpAccessToken = '';
+    
+    const { data: saasSettings } = await supabase
+        .from('saas_settings')
+        .select('setting_value')
+        .eq('setting_key', 'mp_access_token')
+        .single();
+    
+    if (saasSettings?.setting_value) {
+        mpAccessToken = saasSettings.setting_value;
+    } else {
+        // 2. Fallback to Environment Variables
+        mpAccessToken = Deno.env.get('SAAS_MP_ACCESS_TOKEN') || Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN') || '';
+    }
+
     if (!mpAccessToken) {
-        throw new Error('Server Config Error: Missing MP Access Token');
+        throw new Error('Server Config Error: Missing MP Access Token (SaaS)');
     }
 
     // 1. Create Subscription (Preapproval)
