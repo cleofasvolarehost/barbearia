@@ -46,6 +46,7 @@ export default function BookSlug() {
   const [guestData, setGuestData] = useState<GuestData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [pixCode, setPixCode] = useState<string>('');
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'pix' | 'counter' | null>(null);
 
   // Phone Capture for Auth Users
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
@@ -246,13 +247,11 @@ export default function BookSlug() {
           toast.success('Telefone salvo!');
           setIsPhoneModalOpen(false);
           
-          // Retry booking automatically (will pass validation now)
-          // We don't know the method (pix/counter) here easily without storing it, 
-          // but usually premium flow defaults to one or the user clicks again.
-          // Better UX: Just close and let user click "Confirm" again, or store method in state.
-          // For now, let's close and let user click (safe) or we can trigger it.
-          // Actually, let's just close. The user is still on the Payment Step.
-          // They just need to click "Pagar no Local" or "Pagar Pix" again.
+          // Retry booking automatically if we have a pending method
+          if (pendingPaymentMethod) {
+              handlePaymentConfirm(pendingPaymentMethod);
+              setPendingPaymentMethod(null);
+          }
           
       } catch (error) {
           console.error('Error updating phone:', error);
