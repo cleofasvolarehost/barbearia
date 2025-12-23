@@ -96,18 +96,18 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
 
             <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative">
                 
-                {/* Back / Change Plan Button - Improved UX */}
-                <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10">
+                {/* Back / Change Plan Button - Improved UX - Moved Outside Container */}
+                <div className="absolute -top-12 left-0 z-50">
                     <button
                         onClick={onClose}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-sm font-medium text-gray-300 hover:text-white transition-all border border-white/5 hover:border-white/20 group"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white font-medium transition-all backdrop-blur-md border border-white/10 group shadow-lg"
                     >
                         <ArrowRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
                         Trocar Plano
                     </button>
                 </div>
 
-                <div className="text-center mb-8 mt-8">
+                <div className="text-center mb-8">
                     <h2 className="text-2xl font-bold mb-2">Finalizar Assinatura</h2>
                     <p className="text-gray-400">
                         Plano <span className="text-[#7C3AED] font-bold">{plan.name}</span> - R$ {plan.price}

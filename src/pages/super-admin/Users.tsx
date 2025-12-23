@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { GlassCard } from '../../components/GlassCard';
-import { Search, MoreVertical, Trash2, Lock, Ban, Edit, Plus, Building2 } from 'lucide-react';
+import { Search, MoreVertical, Trash2, Lock, Ban, Edit, Plus, Building2, Copy, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function SuperAdminUsers() {
@@ -11,6 +11,7 @@ export default function SuperAdminUsers() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterEstablishment, setFilterEstablishment] = useState('all');
+    const [copiedId, setCopiedId] = useState<string | null>(null);
     
     // Modal States
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -92,6 +93,7 @@ export default function SuperAdminUsers() {
             });
 
             if (error) throw error;
+            if (data?.error) throw new Error(data.error);
             
             toast.success(data.message || 'Sucesso!', { id: toastId });
             fetchData(); // Refresh data
@@ -150,6 +152,13 @@ export default function SuperAdminUsers() {
             });
             setShowEditModal(null);
         } catch (err) {}
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedId(text);
+        setTimeout(() => setCopiedId(null), 2000);
+        toast.success('ID copiado!');
     };
 
     const filteredUsers = users.filter(user => {
@@ -223,12 +232,13 @@ export default function SuperAdminUsers() {
                                 <th className="text-left p-4 text-gray-400 font-medium">Email</th>
                                 <th className="text-left p-4 text-gray-400 font-medium">Função</th>
                                 <th className="text-left p-4 text-gray-400 font-medium">Estabelecimento</th>
+                                <th className="text-left p-4 text-gray-400 font-medium">ID</th>
                                 <th className="text-right p-4 text-gray-400 font-medium">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/10">
                             {loading ? (
-                                <tr><td colSpan={5} className="p-8 text-center text-gray-400">Carregando...</td></tr>
+                                <tr><td colSpan={6} className="p-8 text-center text-gray-400">Carregando...</td></tr>
                             ) : filteredUsers.map(user => (
                                 <tr key={user.id} className="hover:bg-white/5 transition-colors group">
                                     <td className="p-4">
@@ -238,39 +248,33 @@ export default function SuperAdminUsers() {
                                             </div>
                                             <div>
                                                 <div className="text-white font-medium">{user.nome || 'Sem Nome'}</div>
-                                                <div className="text-xs text-gray-500 font-mono">{user.id.substring(0,8)}...</div>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="p-4 text-gray-300">{user.email}</td>
                                     <td className="p-4">
-                                        <select 
-                                            value={user.tipo || 'client'} 
-                                            onChange={async (e) => {
-                                                const newRole = e.target.value;
-                                                if (!window.confirm(`Mudar função de ${user.nome} para ${newRole}?`)) return;
-                                                try {
-                                                    await callAdminAction('update_profile', user.id, { 
-                                                        data: { tipo: newRole } 
-                                                    });
-                                                    // fetchData() is called inside callAdminAction
-                                                } catch (err) {
-                                                    // Error handled in callAdminAction
-                                                }
-                                            }}
-                                            className={`px-3 py-1 rounded-full text-xs font-bold border appearance-none cursor-pointer outline-none ${getRoleBadgeColor(user.tipo || 'client')} [&>option]:text-black`}
-                                        >
-                                            <option value="client">Cliente</option>
-                                            <option value="barber">Barbeiro</option>
-                                            <option value="owner">Dono</option>
-                                            <option value="super_admin">Super Admin</option>
-                                        </select>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getRoleBadgeColor(user.tipo || 'client')}`}>
+                                            {user.tipo === 'client' && 'Cliente'}
+                                            {user.tipo === 'barber' && 'Barbeiro'}
+                                            {user.tipo === 'owner' && 'Dono'}
+                                            {user.tipo === 'super_admin' && 'Super Admin'}
+                                        </span>
                                     </td>
                                     <td className="p-4 text-gray-300">
                                         <div className="flex items-center gap-2">
                                             <Building2 className="w-4 h-4 text-gray-500" />
                                             {getUserEstablishment(user)}
                                         </div>
+                                    </td>
+                                    <td className="p-4">
+                                        <button 
+                                            onClick={() => copyToClipboard(user.id)}
+                                            className="flex items-center gap-2 text-xs text-gray-500 hover:text-white transition-colors group/id"
+                                            title="Copiar ID"
+                                        >
+                                            <span className="font-mono">{user.id.substring(0,8)}...</span>
+                                            {copiedId === user.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 opacity-0 group-hover/id:opacity-100" />}
+                                        </button>
                                     </td>
                                     <td className="p-4 text-right relative">
                                         <div className="flex items-center justify-end gap-2">

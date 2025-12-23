@@ -97,7 +97,6 @@ serve(async (req) => {
                 .from('usuarios')
                 .update(payload.data)
                 .eq('id', userId)
-                .eq('establishment_id', payload.data.establishment_id) // Ensure we are updating the right user context if needed
              
              // If update failed (maybe no rows matched), check if we need to handle it differently
              // But usually profError captures DB errors. 
