@@ -61,7 +61,7 @@ export function MobileBottomNav({ onMenuClick }: MobileBottomNavProps) {
       if (role === 'owner') {
           return [
               { id: '/admin/dashboard', icon: LayoutDashboard, label: 'Painel' },
-              { id: '/admin/dashboard', icon: Calendar, label: 'Agenda' }, // Maybe link to specific agenda view?
+              { id: '/admin/appointments', icon: Calendar, label: 'Agenda' }, // Maybe link to specific agenda view?
               { id: '/admin/team', icon: Users, label: 'Equipe' },
               common
           ];

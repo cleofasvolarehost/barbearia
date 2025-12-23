@@ -38,6 +38,7 @@ export function DesktopSidebar({ onViewChange }: DesktopSidebarProps) {
   const allNavItems = [
     // Owner / Barber
     { id: '/admin/dashboard', icon: Home, label: 'Início', roles: ['owner', 'barber'] },
+    { id: '/admin/appointments', icon: Calendar, label: 'Agendamentos', roles: ['owner', 'barber'] },
     { id: '/admin/marketing', icon: Megaphone, label: 'Marketing', roles: ['owner'] },
     { id: '/admin/whatsapp', icon: MessageCircle, label: 'WhatsApp', roles: ['owner'] },
     { id: '/admin/configuracoes', icon: Building2, label: 'Minha Barbearia', roles: ['owner'] },

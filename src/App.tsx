@@ -125,6 +125,7 @@ function App() {
               {/* Shared Admin Routes (Owner & Barber) */}
               <Route element={<ProtectedRoute allowedRoles={['owner', 'barber']} />}>
                 <Route path="/admin/dashboard" element={<GodModeDashboard />} />
+                <Route path="/admin/appointments" element={<AdminAppointmentsPage />} />
                 <Route path="/clientes" element={<Clients />} />
               </Route>
 
