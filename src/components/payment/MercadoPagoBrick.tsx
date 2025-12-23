@@ -10,7 +10,7 @@ interface MercadoPagoBrickProps {
   amount: number;
   email: string;
   publicKey?: string;
-  onSuccess: (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => void;
+  onSuccess: (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => Promise<void> | void;
   onError: (error: any) => void;
   customization?: {
     paymentMethods?: {
@@ -151,19 +151,24 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
                 onSubmit: ({ selectedPaymentMethod, formData }: any) => {
                     // Extract data needed for subscription
                     // formData contains token, issuer_id, payment_method_id, etc.
-                    return new Promise<void>((resolve, reject) => {
+                    return new Promise<void>(async (resolve, reject) => {
                         console.log('Brick Submit:', formData);
                         // Allow submission if we have a token OR if it's a non-card method (Pix/Ticket)
                         // For Pix/Ticket, token is undefined, but payment_method_id is present.
                         if (formData.token || formData.payment_method_id) {
-                            onSuccess(
-                                formData.token, 
-                                formData.issuer_id, 
-                                formData.payment_method_id,
-                                formData.card?.cardholder?.name,
-                                formData.payer?.identification
-                            );
-                            resolve();
+                            try {
+                                await onSuccess(
+                                    formData.token, 
+                                    formData.issuer_id, 
+                                    formData.payment_method_id,
+                                    formData.card?.cardholder?.name,
+                                    formData.payer?.identification
+                                );
+                                resolve();
+                            } catch (e) {
+                                console.error('Payment processing error:', e);
+                                reject();
+                            }
                         } else {
                             onError('Erro ao processar dados do pagamento');
                             reject();

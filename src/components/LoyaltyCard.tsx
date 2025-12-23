@@ -1,37 +1,96 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gift, Sparkles, Award, TrendingUp, ArrowLeft, Zap } from 'lucide-react';
+import { Gift, Sparkles, Award, TrendingUp, ArrowLeft, Zap, Loader } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 interface LoyaltyCardProps {
   onBack?: () => void;
 }
 
+interface LoyaltyData {
+  points: number;
+  total_visits: number;
+  rewards_redeemed: number;
+  establishment: {
+    name: string;
+    primary_color: string;
+    secondary_color: string;
+  }
+}
+
 export function LoyaltyCard({ onBack }: LoyaltyCardProps) {
-  const [currentCuts, setCurrentCuts] = useState(7);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<LoyaltyData | null>(null);
+  const [currentCuts, setCurrentCuts] = useState(0);
   const totalCuts = 10;
   const [isAnimating, setIsAnimating] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  const progress = (currentCuts / totalCuts) * 100;
-  const remaining = totalCuts - currentCuts;
+  useEffect(() => {
+    fetchLoyaltyData();
+  }, [user]);
 
-  // Simula adicionar um corte (para demonstração)
-  const handleAddCut = () => {
-    if (currentCuts < totalCuts && !isAnimating) {
-      setIsAnimating(true);
-      setCurrentCuts(prev => Math.min(prev + 1, totalCuts));
-      
-      setTimeout(() => {
-        setIsAnimating(false);
-        if (currentCuts + 1 === totalCuts) {
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 3000);
-        }
-      }, 600);
+  const fetchLoyaltyData = async () => {
+    if (!user) return;
+    try {
+      const { data: cards, error } = await supabase
+        .from('loyalty_cards')
+        .select(`
+          points,
+          total_visits,
+          rewards_redeemed,
+          establishment:establishments(name, primary_color, secondary_color)
+        `)
+        .eq('user_id', user.id)
+        .order('last_visit_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      if (cards && cards.length > 0) {
+        const card = cards[0];
+        setData({
+          points: card.points,
+          total_visits: card.total_visits,
+          rewards_redeemed: card.rewards_redeemed,
+          establishment: card.establishment
+        });
+        setCurrentCuts(card.points % totalCuts); // Modulo if points accumulate continuously? 
+        // Or points reset? The schema says points default 0. 
+        // Let's assume points are "current progress" and reset after redemption.
+        // If trigger just adds points, we might need logic to reset.
+        // For now, let's assume points <= 10. If > 10, it implies unredeemed rewards.
+        
+        const effectivePoints = card.points % totalCuts;
+        const rewards = Math.floor(card.points / totalCuts) - (card.rewards_redeemed || 0);
+        
+        setCurrentCuts(effectivePoints === 0 && card.points > 0 && rewards > 0 ? totalCuts : effectivePoints); 
+        // Logic: if 10 points, show full card.
+      } else {
+        // No card yet
+        setData(null);
+        setCurrentCuts(0);
+      }
+    } catch (error) {
+      console.error('Error fetching loyalty card:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const progress = (currentCuts / totalCuts) * 100;
+  const remaining = totalCuts - currentCuts;
   const isComplete = currentCuts === totalCuts;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center text-white">
+        <Loader className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#121212] text-white relative overflow-hidden">
@@ -312,37 +371,28 @@ export function LoyaltyCard({ onBack }: LoyaltyCardProps) {
           </div>
         </motion.div>
 
-        {/* Action Button (Demo) */}
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          onClick={handleAddCut}
-          disabled={isComplete}
-          whileTap={{ scale: 0.95 }}
-          className={`
-            mt-6 w-full py-4 px-6 rounded-2xl font-bold
-            flex items-center justify-center gap-2
-            transition-all duration-300
-            ${
-              isComplete
-                ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:shadow-[0_0_30px_rgba(251,191,36,0.5)]'
-                : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]'
-            }
-          `}
-        >
-          {isComplete ? (
-            <>
-              <Award className="w-5 h-5" />
-              <span>Resgatar Prêmio</span>
-            </>
-          ) : (
-            <>
-              <TrendingUp className="w-5 h-5" />
-              <span>Simular Novo Corte (Demo)</span>
-            </>
-          )}
-        </motion.button>
+        {/* Action Button (Hidden for client, or show Redeem instructions) */}
+        {isComplete && (
+            <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6"
+            >
+             <button
+            className={`
+                w-full py-4 px-6 rounded-2xl font-bold
+                flex items-center justify-center gap-2
+                transition-all duration-300
+                bg-gradient-to-r from-yellow-500 to-orange-500 hover:shadow-[0_0_30px_rgba(251,191,36,0.5)]
+            `}
+            onClick={() => alert('Mostre este cartão ao seu barbeiro para resgatar!')}
+            >
+            <Award className="w-5 h-5" />
+            <span>Resgatar Prêmio na Barbearia</span>
+            </button>
+            </motion.div>
+        )}
 
         {/* Stats Footer */}
         <motion.div
@@ -352,11 +402,11 @@ export function LoyaltyCard({ onBack }: LoyaltyCardProps) {
           className="mt-8 grid grid-cols-2 gap-4"
         >
           <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
-            <p className="text-2xl font-black text-emerald-400">3</p>
+            <p className="text-2xl font-black text-emerald-400">{data?.rewards_redeemed || 0}</p>
             <p className="text-xs text-gray-400">Prêmios Resgatados</p>
           </div>
           <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
-            <p className="text-2xl font-black text-teal-400">27</p>
+            <p className="text-2xl font-black text-teal-400">{data?.total_visits || 0}</p>
             <p className="text-xs text-gray-400">Cortes Totais</p>
           </div>
         </motion.div>

@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, Settings, LogOut, Zap, Megaphone, MessageCircle, Shield, LayoutDashboard, Building2, Receipt, Activity, Crown, Palette, Store } from 'lucide-react';
+import { Home, Calendar, Users, DollarSign, Settings, LogOut, Zap, Megaphone, MessageCircle, Shield, LayoutDashboard, Building2, Receipt, Activity, Crown, Palette, Store, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GlassCard } from './GlassCard';
 import { Link, useLocation } from 'react-router-dom';
@@ -39,6 +39,7 @@ export function DesktopSidebar({ onViewChange }: DesktopSidebarProps) {
     // Owner / Barber
     { id: '/admin/dashboard', icon: Home, label: 'Início', roles: ['owner', 'barber'] },
     { id: '/admin/appointments', icon: Calendar, label: 'Agendamentos', roles: ['owner', 'barber'] },
+    { id: '/fidelidade', icon: Award, label: 'Cartão Fidelidade', roles: ['owner', 'barber', 'client'] },
     { id: '/admin/marketing', icon: Megaphone, label: 'Marketing', roles: ['owner'] },
     { id: '/admin/whatsapp', icon: MessageCircle, label: 'WhatsApp', roles: ['owner'] },
     { id: '/admin/configuracoes', icon: Building2, label: 'Minha Barbearia', roles: ['owner'] },
