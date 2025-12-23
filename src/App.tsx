@@ -29,6 +29,7 @@ import AdminServices from "./pages/AdminServices";
 import AdminPlans from "./pages/AdminPlans";
 import AdminTeam from "./pages/AdminTeam";
 import AdminBranding from "./pages/AdminBranding"; // Import AdminBranding
+import GeneralSettings from "./pages/GeneralSettings"; // Import GeneralSettings
 import SuperAdminGateways from "./pages/super-admin/Gateways";
 import SuperAdminDashboard from "./pages/super-admin/Dashboard";
 import SuperAdminTenants from "./pages/super-admin/Tenants";
@@ -136,7 +137,7 @@ function App() {
                 <Route path="/admin/plans" element={<AdminPlans />} />
                 <Route path="/admin/marketing" element={<RescueCenter />} />
                 <Route path="/admin/whatsapp" element={<WhatsAppSettings />} />
-                <Route path="/admin/configuracoes" element={<Settings />} /> 
+                <Route path="/admin/configuracoes" element={<GeneralSettings />} /> 
                 <Route path="/financeiro" element={<Finance />} />
               </Route>
 
