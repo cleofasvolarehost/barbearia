@@ -8,7 +8,7 @@ interface LoyaltyCardProps {
   onBack?: () => void;
 }
 
-interface LoyaltyData {
+export interface LoyaltyData {
   points: number;
   total_visits: number;
   rewards_redeemed: number;
@@ -51,11 +51,14 @@ export function LoyaltyCard({ onBack }: LoyaltyCardProps) {
 
       if (cards && cards.length > 0) {
         const card = cards[0];
+        // Ensure establishment object structure matches interface, handling potential array if join returns array
+        const establishmentData = Array.isArray(card.establishment) ? card.establishment[0] : card.establishment;
+        
         setData({
           points: card.points,
           total_visits: card.total_visits,
           rewards_redeemed: card.rewards_redeemed,
-          establishment: card.establishment
+          establishment: establishmentData
         });
         setCurrentCuts(card.points % totalCuts); // Modulo if points accumulate continuously? 
         // Or points reset? The schema says points default 0. 
