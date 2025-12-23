@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { Sparkles, Check, Zap, Shield, Crown, AlertTriangle, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Sparkles, Check, Zap, Shield, Crown, AlertTriangle, ArrowRight, Calendar, CreditCard, XCircle, Clock } from 'lucide-react';
 import { useEstablishment } from '../contexts/EstablishmentContext';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -13,6 +13,7 @@ export default function Subscription() {
   const [plans, setPlans] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     fetchPlans();
@@ -20,7 +21,6 @@ export default function Subscription() {
 
   const fetchPlans = async () => {
     try {
-      // Fetch from 'saas_plans' (Single Source of Truth)
       const { data, error } = await supabase
         .from('saas_plans')
         .select('*')
@@ -29,11 +29,9 @@ export default function Subscription() {
       
       if (error) throw error;
       
-      // Transform data to match UI expectations
       const formattedPlans = (data || []).map(p => ({
           ...p,
-          price: Number(p.price).toFixed(2), // Ensure string format
-          // interval_days and features are already correct in saas_plans
+          price: Number(p.price).toFixed(2),
       }));
 
       setPlans(formattedPlans);
@@ -44,20 +42,54 @@ export default function Subscription() {
   };
 
   const handleSelectPlan = (plan: any) => {
-    console.log("Passing Plan to Modal:", plan);
     setSelectedPlan(plan);
     setIsPaymentModalOpen(true);
   };
 
   const handlePaymentSuccess = async () => {
       await refreshEstablishment();
-      // Optionally redirect or show confetti
+      toast.success('Assinatura atualizada com sucesso!');
+  };
+
+  const handleCancelSubscription = async () => {
+      if (!establishment) return;
+      if (!window.confirm('Tem certeza que deseja cancelar a renovação automática? Você continuará com acesso até o fim do período atual.')) {
+          return;
+      }
+
+      setCancelling(true);
+      try {
+          const { data, error } = await supabase.functions.invoke('manage-subscription', {
+              body: {
+                  action: 'cancel',
+                  establishment_id: establishment.id
+              }
+          });
+
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+
+          toast.success('Assinatura cancelada com sucesso.');
+          await refreshEstablishment();
+      } catch (error: any) {
+          console.error('Error cancelling:', error);
+          toast.error(error.message || 'Erro ao cancelar assinatura');
+      } finally {
+          setCancelling(false);
+      }
   };
 
   const isExpired = establishment?.subscription_end_date && new Date(establishment.subscription_end_date) < new Date();
+  const isActive = establishment?.subscription_status === 'active';
+  const isCancelled = establishment?.subscription_status === 'cancelled';
+  
   const daysRemaining = establishment?.subscription_end_date 
     ? Math.ceil((new Date(establishment.subscription_end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) 
     : 0;
+
+  const endDateFormatted = establishment?.subscription_end_date 
+    ? new Date(establishment.subscription_end_date).toLocaleDateString()
+    : '-';
 
   const getPeriodLabel = (days: number) => {
     if (days === 30) return 'mês';
@@ -91,45 +123,119 @@ export default function Subscription() {
             Assinatura <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF]">CyberSalon</span>
           </h1>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Mantenha seu acesso ao sistema de gestão mais avançado do mercado.
+            Gerencie seu plano e mantenha seu acesso ao sistema.
           </p>
         </div>
 
-        {/* Current Status Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`mb-12 p-6 rounded-3xl border ${isExpired ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'} backdrop-blur-xl`}
-        >
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isExpired ? 'bg-red-500/20 text-red-500' : 'bg-[#10B981]/20 text-[#10B981]'}`}>
-                {isExpired ? <AlertTriangle className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
-              </div>
-              <div>
-                <h2 className="text-xl font-bold">
-                    {isExpired ? 'Assinatura Expirada' : 'Assinatura Ativa'}
-                </h2>
-                <p className="text-sm text-gray-400">
-                    {isExpired 
-                        ? 'Renove agora para recuperar o acesso total.' 
-                        : `Vence em ${daysRemaining} dias (${new Date(establishment?.subscription_end_date!).toLocaleDateString()})`
-                    }
-                </p>
-              </div>
-            </div>
-            
-            {!isExpired && (
-                <div className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm font-mono">
-                    Plano Atual: <span className="text-[#2DD4BF] font-bold uppercase">{establishment?.subscription_plan || 'Trial'}</span>
+        {/* Active Subscription Management Card */}
+        {isActive && !isExpired && (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-12 bg-[#1E1E1E] border border-white/10 rounded-3xl overflow-hidden relative"
+            >
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF]"></div>
+                <div className="p-8 grid md:grid-cols-3 gap-8 items-center">
+                    
+                    {/* Status Info */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center">
+                                <Shield className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Assinatura Ativa</h2>
+                                <p className="text-sm text-gray-400">Plano {establishment?.subscription_plan || 'Premium'}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-300 bg-white/5 p-3 rounded-xl">
+                            <Calendar className="w-4 h-4 text-[#7C3AED]" />
+                            <span>Renova em: <strong>{endDateFormatted}</strong></span>
+                        </div>
+                    </div>
+
+                    {/* Usage/Details */}
+                    <div className="space-y-2 text-center md:text-left">
+                        <div className="text-sm text-gray-400">Dias Restantes</div>
+                        <div className="text-4xl font-black text-white">{daysRemaining}</div>
+                        <div className="text-xs text-green-400 font-bold uppercase tracking-wider">Acesso Total Liberado</div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-3">
+                        <button 
+                            onClick={() => {
+                                // Find current plan or default to first to show renewal options
+                                const currentPlan = plans.find(p => p.name === establishment?.subscription_plan) || plans[0];
+                                handleSelectPlan(currentPlan);
+                            }}
+                            className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold flex items-center justify-center gap-2 transition-colors"
+                        >
+                            <CreditCard className="w-4 h-4" />
+                            Renovar / Mudar Pagamento
+                        </button>
+                        
+                        <button 
+                            onClick={handleCancelSubscription}
+                            disabled={cancelling}
+                            className="w-full py-3 rounded-xl hover:bg-red-500/10 text-red-400 hover:text-red-300 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                            {cancelling ? 'Processando...' : (
+                                <>
+                                    <XCircle className="w-4 h-4" /> Cancelar Assinatura
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
+            </motion.div>
+        )}
+
+        {/* Cancelled/Expired Status Card */}
+        {(isCancelled || isExpired) && (
+             <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`mb-12 p-6 rounded-3xl border ${isExpired ? 'bg-red-500/10 border-red-500/30' : 'bg-orange-500/10 border-orange-500/30'} backdrop-blur-xl`}
+             >
+                 <div className="flex items-center gap-4">
+                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isExpired ? 'bg-red-500/20 text-red-500' : 'bg-orange-500/20 text-orange-500'}`}>
+                         <AlertTriangle className="w-6 h-6" />
+                     </div>
+                     <div>
+                         <h2 className="text-xl font-bold">
+                             {isExpired ? 'Assinatura Expirada' : 'Renovação Cancelada'}
+                         </h2>
+                         <p className="text-sm text-gray-300">
+                             {isExpired 
+                                 ? 'Renove agora para recuperar o acesso total ao sistema.' 
+                                 : `Seu acesso continua disponível até ${endDateFormatted}. Após essa data, você precisará renovar.`
+                             }
+                         </p>
+                     </div>
+                 </div>
+             </motion.div>
+        )}
+
+        {/* Plans Section Title */}
+        <div className="flex items-center justify-between mb-8 mt-16 border-t border-white/10 pt-16">
+            <div>
+                <h2 className="text-2xl font-bold text-white mb-2">Planos Disponíveis</h2>
+                <p className="text-gray-400 text-sm">Escolha o melhor ciclo para o seu negócio</p>
+            </div>
+            {isActive && (
+                <span className="text-xs font-bold bg-[#7C3AED]/20 text-[#7C3AED] px-3 py-1 rounded-full">
+                    Mudar Ciclo
+                </span>
             )}
-          </div>
-        </motion.div>
+        </div>
 
         {/* Plans Grid */}
         <div className="grid md:grid-cols-3 gap-8">
-          {plans.map((plan, index) => (
+          {plans.map((plan, index) => {
+             const isCurrentPlan = establishment?.subscription_plan === plan.name && !isExpired;
+             
+             return (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 20 }}
@@ -139,12 +245,18 @@ export default function Subscription() {
                 plan.is_recommended
                   ? 'bg-gradient-to-b from-[#7C3AED]/10 to-transparent border-[#7C3AED] shadow-2xl shadow-[#7C3AED]/20 scale-105 z-10'
                   : 'bg-white/5 backdrop-blur border-white/10 hover:bg-white/10'
-              }`}
+              } ${isCurrentPlan ? 'ring-2 ring-green-500 border-green-500 bg-green-500/5' : ''}`}
             >
               {plan.is_recommended && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-sm font-bold shadow-lg">
                   Mais Popular
                 </div>
+              )}
+              
+              {isCurrentPlan && (
+                  <div className="absolute top-4 right-4 text-green-500 flex items-center gap-1 text-xs font-bold uppercase">
+                      <Check className="w-4 h-4" /> Atual
+                  </div>
               )}
 
               <div className="mb-6">
@@ -168,16 +280,25 @@ export default function Subscription() {
 
               <button
                 onClick={() => handleSelectPlan(plan)}
+                disabled={isCurrentPlan && isActive}
                 className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                  plan.is_recommended
-                    ? 'bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-lg hover:shadow-[#7C3AED]/50 text-white'
-                    : 'bg-white/10 hover:bg-white/20 text-white'
+                  isCurrentPlan && isActive
+                    ? 'bg-green-500/20 text-green-500 cursor-default'
+                    : plan.is_recommended
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-lg hover:shadow-[#7C3AED]/50 text-white'
+                        : 'bg-white/10 hover:bg-white/20 text-white'
                 }`}
               >
-                Escolher {plan.name} <ArrowRight className="w-4 h-4" />
+                {isCurrentPlan && isActive ? (
+                    'Plano Atual'
+                ) : (
+                    <>
+                        {isActive ? 'Mudar para ' : 'Escolher '} {plan.name} <ArrowRight className="w-4 h-4" />
+                    </>
+                )}
               </button>
             </motion.div>
-          ))}
+          )})}
         </div>
 
         {/* FAQ / Trust */}
