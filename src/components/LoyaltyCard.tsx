@@ -14,8 +14,8 @@ interface LoyaltyData {
   rewards_redeemed: number;
   establishment: {
     name: string;
-    primary_color: string;
-    secondary_color: string;
+    primary_color?: string;
+    secondary_color?: string;
   }
 }
 
