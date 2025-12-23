@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useEstablishment } from '../contexts/EstablishmentContext';
 import { GlassCard } from '../components/GlassCard';
-import { Upload, Save, Palette, Image as ImageIcon, Check, Loader2, Trash2 } from 'lucide-react';
+import { Upload, Save, Palette, Image as ImageIcon, Check, Loader2, Trash2, ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function Settings() {
@@ -259,13 +259,26 @@ export default function Settings() {
 
                {/* Mock Button */}
                <div className="absolute bottom-4 left-4 right-4">
-                  <div className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-lg" style={{ backgroundColor: theme.primary_color }}>
+                  <button 
+                    onClick={() => toast('Este é apenas um preview visual. Use o botão abaixo para ver a página real.', { icon: '🎨' })}
+                    className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-lg cursor-default active:scale-95 transition-transform" 
+                    style={{ backgroundColor: theme.primary_color }}
+                  >
                      Confirmar <Check className="w-4 h-4" />
-                  </div>
+                  </button>
                </div>
             </div>
           </div>
-          <p className="text-center text-xs text-gray-500">Visualização aproximada da página de agendamento</p>
+          <p className="text-center text-xs text-gray-500 mb-4">Visualização aproximada da página de agendamento</p>
+          
+          <a 
+            href={`/agendar/${establishment?.slug}`} 
+            target="_blank" 
+            rel="noreferrer"
+            className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all"
+          >
+            Ver Página Real <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
 
       </div>
