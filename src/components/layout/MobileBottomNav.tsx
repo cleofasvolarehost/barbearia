@@ -9,6 +9,13 @@ interface MobileBottomNavProps {
   onMenuClick: () => void;
 }
 
+interface NavItem {
+  id: string;
+  icon: any;
+  label: string;
+  action?: () => void;
+}
+
 export function MobileBottomNav({ onMenuClick }: MobileBottomNavProps) {
   const location = useLocation();
   const activeView = location.pathname;
@@ -31,8 +38,8 @@ export function MobileBottomNav({ onMenuClick }: MobileBottomNavProps) {
   }, [user]);
 
   // Define Items per Role
-  const getNavItems = () => {
-      const common = { id: '/menu', icon: Menu, label: 'Menu', action: onMenuClick };
+  const getNavItems = (): NavItem[] => {
+      const common: NavItem = { id: '/menu', icon: Menu, label: 'Menu', action: onMenuClick };
 
       if (role === 'client') {
           return [
