@@ -66,7 +66,14 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
       setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
+  const handleBrickSuccess = async (
+    token: string | undefined,
+    issuer_id?: string,
+    payment_method_id?: string,
+    card_holder_name?: string,
+    identification?: any,
+    installments?: number
+  ) => {
     setLoading(true);
     try {
         if (!establishment || !user?.email) return;
@@ -74,22 +81,28 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
         console.log('Creating subscription with plan_id=', plan.id, 'price=', plan.price);
         console.log('Method:', payment_method_id);
 
+        const payload: Record<string, unknown> = {
+            token,
+            payer_email: user.email,
+            establishment_id: establishment.id,
+            plan_id: plan.id,
+            issuer_id,
+            payment_method_id,
+            card_holder_name,
+            identification
+        };
+
+        if (typeof installments === 'number') {
+            payload.installments = installments;
+        }
+
         const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
             },
-            body: JSON.stringify({
-                token,
-                payer_email: user.email,
-                establishment_id: establishment.id,
-                plan_id: plan.id,
-                issuer_id,
-                payment_method_id,
-                card_holder_name,
-                identification
-            })
+            body: JSON.stringify(payload)
         });
 
         const data = await response.json();
