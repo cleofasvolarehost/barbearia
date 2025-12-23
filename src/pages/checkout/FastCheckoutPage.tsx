@@ -1,0 +1,405 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Lock, ShieldCheck, CreditCard, User, Mail, Phone, ChevronDown, ChevronUp, Check, Zap, Calendar, Loader2, AlertTriangle } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
+import { MercadoPagoBrick } from '../../components/payment/MercadoPagoBrick';
+import { toast } from 'react-hot-toast';
+
+type PaymentMethod = 'pix' | 'credit';
+
+export default function FastCheckoutPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  const planId = searchParams.get('plan');
+  
+  const [loadingPlan, setLoadingPlan] = useState(true);
+  const [plan, setPlan] = useState<any>(null);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('pix');
+  const [expandedMethod, setExpandedMethod] = useState<PaymentMethod>('pix');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '', // New for guest checkout
+  });
+
+  // Pre-fill if logged in
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        email: user.email || '',
+        name: user.user_metadata?.name || '',
+        phone: user.user_metadata?.phone || ''
+      }));
+    }
+  }, [user]);
+
+  // Fetch Plan
+  useEffect(() => {
+    async function fetchPlan() {
+      if (!planId) return;
+      try {
+        const { data, error } = await supabase
+          .from('saas_plans')
+          .select('*')
+          .eq('id', planId) // Assuming ID or Slug
+          .single();
+          
+        // If not found by ID, try by name/slug logic if you have that setup
+        // For now assuming ID or direct lookup
+        if (error) {
+             // Fallback lookup by name if needed, or handle error
+             console.error('Plan not found', error);
+        } else {
+            setPlan(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingPlan(false);
+      }
+    }
+    fetchPlan();
+  }, [planId]);
+
+  const planPrice = plan ? Number(plan.price) : 0;
+  const pixDiscount = 0; // Configurable
+  const pixPrice = planPrice * (1 - pixDiscount / 100);
+
+  const toggleMethod = (method: PaymentMethod) => {
+    setSelectedMethod(method);
+    setExpandedMethod(method);
+  };
+
+  const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
+    setIsProcessing(true);
+    try {
+        // 1. Prepare Payload
+        const payload = {
+            token,
+            issuer_id,
+            payment_method_id,
+            card_holder_name,
+            identification,
+            payer_email: formData.email,
+            plan_id: plan?.id,
+            user_data: !user ? {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                password: formData.password
+            } : undefined,
+            type: 'new_subscription_fast_track'
+        };
+
+        // 2. Call Edge Function (Atomic Transaction)
+        const { data, error } = await supabase.functions.invoke('acquire-customer', {
+            body: payload
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        // 3. Success Flow
+        setShowSuccess(true);
+        setTimeout(() => {
+            if (data?.temp_password) {
+                // Auto-login logic could go here if token returned
+                toast.success(`Conta criada! Senha temporária enviada para o email.`);
+                navigate('/login');
+            } else {
+                navigate('/admin/dashboard');
+            }
+        }, 3000);
+
+    } catch (error: any) {
+        console.error('Checkout Error:', error);
+        toast.error(error.message || 'Erro ao processar pagamento');
+        
+        // Save Lead logic could be here if we want to separate it from the atomic function
+        // But optimally the Edge Function handles the "Lead" creation on failure internally
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  // If loading plan
+  if (loadingPlan) {
+      return (
+          <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+          </div>
+      );
+  }
+
+  // If no plan found
+  if (!plan && !loadingPlan) {
+      return (
+          <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-white">
+              <AlertTriangle className="w-12 h-12 text-yellow-500 mb-4" />
+              <h2 className="text-xl font-bold">Plano não encontrado</h2>
+              <button onClick={() => navigate('/')} className="mt-4 text-[#7C3AED]">Voltar ao início</button>
+          </div>
+      );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-white">
+      {/* HEADER - Trust Anchor */}
+      <header className="sticky top-0 z-30 bg-[#050505]/80 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-md mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7C3AED] to-[#10B981] flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <span className="text-sm font-black">CyberSalon</span>
+            </div>
+
+            {/* Security Badge */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#10B981]/10 border border-[#10B981]/30">
+              <Lock className="w-3.5 h-3.5 text-[#10B981]" />
+              <span className="text-xs font-bold text-[#10B981]">Ambiente Seguro</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* MAIN CONTENT */}
+      <main className="max-w-md mx-auto px-6 py-8 pb-40">
+        {/* THE "HERO" PRODUCT CARD */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="relative p-6 rounded-3xl bg-gradient-to-br from-[#1A1A1A] to-[#0D0D0D] border border-white/10 overflow-hidden">
+            {/* Glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#7C3AED]/5 to-[#10B981]/5" />
+            
+            <div className="relative z-10">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-[#FFD700]/20 to-[#FFA500]/20 border border-[#FFD700]/50 mb-4">
+                <ShieldCheck className="w-4 h-4 text-[#FFD700]" />
+                <span className="text-xs font-black text-[#FFD700]">7 DIAS DE GARANTIA</span>
+              </div>
+
+              {/* Plan Name */}
+              <h2 className="text-2xl font-black text-white mb-2">{plan.name}</h2>
+              
+              {/* Benefits List (Dynamic or Static fallback) */}
+              <ul className="space-y-2 mb-5">
+                {(plan.features || [
+                  'Agendamento ilimitado',
+                  'Dashboard analytics completo',
+                  'Marketing & Fidelidade',
+                  'Suporte prioritário 24/7',
+                ]).map((benefit: string, i: number) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
+                    <div className="w-5 h-5 rounded-full bg-[#10B981]/20 flex items-center justify-center flex-shrink-0">
+                      <Check className="w-3 h-3 text-[#10B981]" />
+                    </div>
+                    {benefit}
+                  </li>
+                ))}
+              </ul>
+
+              {/* Price */}
+              <div className="pt-4 border-t border-white/10">
+                <div className="flex items-end gap-2">
+                  <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#7C3AED] to-[#10B981]">
+                    R$ {planPrice.toFixed(2)}
+                  </span>
+                  <span className="text-lg text-gray-400 pb-2">/{plan.interval_days === 30 ? 'mês' : 'ano'}</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Cobrado {plan.interval_days === 30 ? 'mensalmente' : 'anualmente'} • Cancele quando quiser</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* FAST INPUTS (The Form) - Only show if NOT logged in */}
+        {!user && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">Seus Dados</h3>
+            
+            <div className="space-y-3">
+              {/* Name */}
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Nome completo"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full pl-12 pr-4 py-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#7C3AED] focus:bg-white/10 transition-all"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+                <input
+                  type="email"
+                  placeholder="Seu melhor e-mail"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full pl-12 pr-4 py-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#7C3AED] focus:bg-white/10 transition-all"
+                />
+              </div>
+
+              {/* Phone */}
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+                <input
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full pl-12 pr-4 py-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#7C3AED] focus:bg-white/10 transition-all"
+                />
+              </div>
+
+               {/* Password (Simplified for Guest Checkout) */}
+               <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+                <input
+                  type="password"
+                  placeholder="Crie uma senha segura"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full pl-12 pr-4 py-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#7C3AED] focus:bg-white/10 transition-all"
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* PAYMENT SELECTOR */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6"
+        >
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">Pagamento</h3>
+
+          {/* We reuse the MercadoPagoBrick but style it or wrap it to match the OnePage feel */}
+          {/* Or we manually build the UI if we want custom look like the example. 
+              For "Instant" implementation, using the Brick is safer and faster for backend integration.
+              The provided OnePageCheckout example had manual card fields which requires tokenizer.
+              MercadoPagoBrick handles tokenization automatically.
+          */}
+          
+          <div className="bg-[#1E1E1E] p-4 rounded-3xl border border-white/10">
+             <MercadoPagoBrick 
+                amount={planPrice}
+                email={formData.email}
+                onSuccess={handleBrickSuccess}
+                onError={(err) => toast.error('Erro no pagamento')}
+                customization={{
+                    visual: {
+                        style: { theme: 'dark' },
+                        hidePaymentButton: false
+                    }
+                }}
+            />
+          </div>
+
+        </motion.div>
+
+        {/* Trust Badges */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="flex items-center justify-center gap-4 text-xs text-gray-600"
+        >
+          <div className="flex items-center gap-1">
+            <Lock className="w-3.5 h-3.5" />
+            <span>SSL 256-bit</span>
+          </div>
+          <div className="w-1 h-1 rounded-full bg-gray-700" />
+          <div className="flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>PCI Compliant</span>
+          </div>
+        </motion.div>
+      </main>
+
+      {/* Success Overlay */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 flex items-center justify-center"
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', damping: 15 }}
+              className="text-center"
+            >
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  boxShadow: [
+                    '0 0 40px rgba(16, 185, 129, 0.6)',
+                    '0 0 80px rgba(16, 185, 129, 1)',
+                    '0 0 40px rgba(16, 185, 129, 0.6)',
+                  ],
+                }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#10B981] to-[#14B8A6] flex items-center justify-center"
+              >
+                <Check className="w-16 h-16 text-white" strokeWidth={3} />
+              </motion.div>
+
+              <h2 className="text-4xl font-black text-white mb-3">Bem-vindo ao Pro!</h2>
+              <p className="text-lg text-gray-400 mb-6">Seu acesso foi liberado</p>
+
+              {/* Particles */}
+              {[...Array(30)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+                  animate={{
+                    x: (Math.random() - 0.5) * 600,
+                    y: (Math.random() - 0.5) * 600,
+                    scale: 0,
+                    opacity: 0,
+                  }}
+                  transition={{ duration: 2, delay: i * 0.02 }}
+                  className="absolute w-2 h-2 rounded-full"
+                  style={{
+                    background: ['#10B981', '#7C3AED', '#FFD700'][i % 3],
+                    left: '50%',
+                    top: '40%',
+                  }}
+                />
+              ))}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

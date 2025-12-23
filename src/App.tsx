@@ -86,6 +86,7 @@ function App() {
             <Routes>
               {/* Rota Raiz: Landing Page de Venda do SaaS (CyberSalon) */}
               <Route path="/" element={<LandingPage />} />
+              <Route path="/checkout/start" element={<FastCheckoutPage />} />
 
               {/* Rotas de Autenticação */}
               <Route path="/login" element={<Login />} />
