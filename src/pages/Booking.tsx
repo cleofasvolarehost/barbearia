@@ -365,6 +365,7 @@ export default function Booking() {
                 {
                     usuario_id: activeUserId,
                     barbeiro_id: selectedBarber.id,
+                    establishment_id: selectedBarber.establishment_id,
                     data: selectedDate,
                     horario: selectedTime,
                     preco_total: selectedService.preco,

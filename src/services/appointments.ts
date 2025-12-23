@@ -18,7 +18,7 @@ export const appointmentsService = {
           preco_total,
           observacoes,
           created_at,
-          barbeiro:barbeiros(id, nome, foto_url, establishment_id),
+          barbeiro:barbeiros!inner(id, nome, foto_url, establishment_id),
           usuario:usuarios(id, nome, telefone),
           servicos:agendamentos_servicos(servicos(id, nome, duracao_minutos, preco))
         `,
@@ -26,9 +26,7 @@ export const appointmentsService = {
       );
 
     if (filters.establishment_id) {
-      query = query.or(
-        `establishment_id.eq.${filters.establishment_id},barbeiro.establishment_id.eq.${filters.establishment_id}`
-      );
+      query = query.eq('barbeiro.establishment_id', filters.establishment_id);
     }
 
     if (filters.dateRange) {
