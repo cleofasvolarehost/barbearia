@@ -60,6 +60,7 @@ export function GodModeDashboard() {
 
   // Analytics State
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [heatmapData, setHeatmapData] = useState<any[]>(generateHeatmapData());
   const [retention, setRetention] = useState({ newClients: 0, returningClients: 0 });
   const maxRevenue = leaderboard.length > 0 ? Math.max(...leaderboard.map(s => s.revenue)) : 1;
 
