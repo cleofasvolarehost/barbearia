@@ -86,6 +86,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
                 amount: amount,
                 payer: {
                     email: email,
+                    entityType: 'individual'
                 },
             },
             customization: {
