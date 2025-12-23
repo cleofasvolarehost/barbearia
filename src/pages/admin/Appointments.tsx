@@ -5,6 +5,7 @@ import { Appointment, AppointmentFilters, AppointmentStatus } from '../../types/
 import { AppointmentsTable } from '../../components/appointments/AppointmentsTable';
 import { CreateAppointmentModal } from '../../components/appointments/CreateAppointmentModal';
 import { AppointmentModal } from '../../components/appointments/AppointmentModal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Plus, Filter, Calendar as CalendarIcon, List as ListIcon, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek } from 'date-fns';
 
@@ -182,17 +183,24 @@ export default function AdminAppointmentsPage() {
           <div className="h-8 w-px bg-white/10 hidden md:block"></div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 w-full">
-            <select
-              onChange={(e) => handleStatusFilterChange(e.target.value)}
-              className="block w-full sm:w-48 rounded-xl bg-black/20 border border-white/10 text-white shadow-sm focus:border-[#7C3AED] focus:ring-[#7C3AED] sm:text-sm py-2.5 px-4"
+          <div className="w-full sm:w-48">
+            <Select
+              value={filters.status || 'all'}
+              onValueChange={handleStatusFilterChange}
             >
-              <option value="all">Todos Status</option>
-              <option value="scheduled">Agendado</option>
-              <option value="confirmed">Confirmado</option>
-              <option value="completed">Concluído</option>
-              <option value="cancelled">Cancelado</option>
-              <option value="no_show">Não Compareceu</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Status</SelectItem>
+                <SelectItem value="scheduled">Agendado</SelectItem>
+                <SelectItem value="confirmed">Confirmado</SelectItem>
+                <SelectItem value="completed">Concluído</SelectItem>
+                <SelectItem value="cancelled">Cancelado</SelectItem>
+                <SelectItem value="no_show">Não Compareceu</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
             <div className="relative flex-1 w-full">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
