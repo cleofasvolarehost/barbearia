@@ -1,7 +1,9 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { DesktopSidebar } from '../DesktopSidebar';
-import { MobileNavigation } from '../MobileNavigation';
+import { MobileBottomNav, getDrawerItems } from './MobileBottomNav';
+import { MobileHeader } from './MobileHeader';
+import { MobileDrawer } from './MobileDrawer';
 import { FloatingActionButton } from '../FloatingActionButton';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
@@ -14,8 +16,9 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const path = location.pathname;
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [role, setRole] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -32,40 +35,68 @@ export default function Layout({ children }: LayoutProps) {
     }
   }, [user]);
 
-  // Rotas onde a Sidebar Administrativa NÃO deve aparecer
-  // Basicamente: Home, Login, Cadastro, e Fluxo de Agendamento do Cliente
+  // Public Routes (No Nav)
+  // Landing Page, Login, Register, Forgot Password
   const isPublicRoute = 
     path === '/' || 
     path === '/login' || 
     path === '/cadastro' || 
-    path === '/agendamento' ||
-    path === '/servicos' ||
-    path.startsWith('/agendar/'); // Hide on booking flow
+    path === '/recuperar-senha' ||
+    path === '/reset-password' ||
+    path === '/partner/register';
 
-  // Show Admin Controls only for allowed roles
-  const showAdminControls = !isPublicRoute && (role === 'owner' || role === 'barber' || role === 'super_admin');
+  // Booking Flow specific check (might want nav or not?)
+  // Usually booking flow is focused. But if logged in, maybe yes?
+  // Let's hide for now to keep it clean, or follow previous logic.
+  // Previous logic: path.startsWith('/agendar/') was hidden.
+
+  const showNav = !isPublicRoute && user; // Only show nav if logged in and not on public page
+
+  // Desktop Sidebar: Only for Admin/Owner/Barber (Not Clients)
+  const showSidebar = showNav && role !== 'client';
+
+  // Mobile Nav: For Everyone Logged In
+  const showMobileNav = showNav;
+
+  const handleLogout = async () => {
+      await signOut();
+      window.location.href = '/login';
+  };
 
   return (
     <div className="min-h-screen bg-[#121212] text-white">
-      {/* Exibe Sidebar apenas se NÃO for rota pública E se for admin/owner/barber */}
-      {/* Actually, Sidebar handles its own filtering, but usually clients don't see the admin sidebar at all. */}
-      {/* If client logs in, they go to /minhas-reservas. Do they need a sidebar? Maybe a simplified one? */}
-      {/* For now, let's keep Sidebar logic as is (it shows for logged in users), but maybe we hide it for clients? */}
-      {/* DesktopSidebar has "Painel Barbeiro" etc. It might not be designed for clients. */}
-      {/* Let's check if DesktopSidebar handles 'client' role gracefully. It seems it filters items. */}
-      
-      {!isPublicRoute && role !== 'client' && <DesktopSidebar />}
+      {/* Mobile Header (Sticky Top) */}
+      {showMobileNav && <MobileHeader />}
 
-      {/* Ajusta margem: Se tiver sidebar, margem esquerda. Se não, centralizado/full width */}
-      <main className={`${(!isPublicRoute && role !== 'client') ? 'md:ml-64' : ''} min-h-screen ${!isPublicRoute ? 'pb-24 md:pb-8' : ''}`}>
+      {/* Desktop Sidebar */}
+      {showSidebar && <DesktopSidebar />}
+
+      {/* Main Content */}
+      <main className={`
+        min-h-screen transition-all duration-300
+        ${showSidebar ? 'md:ml-64' : ''} 
+        ${showMobileNav ? 'pt-20 pb-24 md:pt-0 md:pb-8' : ''} 
+      `}>
         {children}
       </main>
 
-      {/* FAB apenas para Admin (pode ajustar lógica se quiser que suma também) */}
-      {showAdminControls && <FloatingActionButton onAddClient={() => console.log('Add client')} />}
+      {/* FAB (Admin Only) */}
+      {showSidebar && <FloatingActionButton onAddClient={() => console.log('Add client')} />}
 
-      {/* Mobile Nav apenas para Admin */}
-      {showAdminControls && <MobileNavigation />}
+      {/* Mobile Bottom Nav */}
+      {showMobileNav && (
+        <MobileBottomNav onMenuClick={() => setIsDrawerOpen(true)} />
+      )}
+
+      {/* Mobile Drawer (Menu) */}
+      <MobileDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)}
+        items={getDrawerItems(role)}
+        role={role}
+        onLogout={handleLogout}
+        userEmail={user?.email}
+      />
 
       {/* Toast Notifications */}
       <Toaster position="top-center" toastOptions={{

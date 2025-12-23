@@ -291,49 +291,67 @@ export default function Clients() {
               transition={{ delay: idx * 0.05 }}
             >
               <GlassCard className="p-4" hover>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Header / Main Info */}
                   <div className="flex items-center gap-4">
                     <div 
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
                       style={{ backgroundColor: client.avatarColor }}
                     >
                       {client.name.charAt(0)}
                     </div>
-                    <div>
-                      <h3 className="text-white font-medium">{client.name}</h3>
-                      <div className="flex items-center gap-3 text-sm text-white/40">
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                          <h3 className="text-white font-medium truncate">{client.name}</h3>
+                          {/* Mobile Status Badge */}
+                          <span className={`md:hidden px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${
+                            client.status === 'active' 
+                              ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                              : 'bg-white/5 text-white/40 border border-white/10'
+                          }`}>
+                            {client.status === 'active' ? 'Ativo' : 'Inativo'}
+                          </span>
+                      </div>
+                      <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 text-sm text-white/40">
+                        <span className="flex items-center gap-1 truncate">
+                          <Mail className="w-3 h-3 flex-shrink-0" />
                           {client.email}
                         </span>
-                        <span className="hidden md:flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
+                        <span className="flex items-center gap-1 truncate">
+                          <Phone className="w-3 h-3 flex-shrink-0" />
                           {client.phone}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6">
-                    <div className="hidden md:block text-right">
-                      <p className="text-white/40 text-xs uppercase tracking-wider">Última Visita</p>
-                      <p className="text-white text-sm">{client.lastVisit}</p>
+                  {/* Stats & Actions */}
+                  <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-white/5 pt-3 md:pt-0 mt-2 md:mt-0">
+                    <div className="flex gap-6">
+                        <div className="text-left md:text-right">
+                        <p className="text-white/40 text-xs uppercase tracking-wider">Última Visita</p>
+                        <p className="text-white text-sm">{client.lastVisit}</p>
+                        </div>
+                        <div className="text-left md:text-right">
+                        <p className="text-white/40 text-xs uppercase tracking-wider">Visitas</p>
+                        <p className="text-white text-sm">{client.totalVisits}</p>
+                        </div>
                     </div>
-                    <div className="hidden md:block text-right">
-                      <p className="text-white/40 text-xs uppercase tracking-wider">Visitas</p>
-                      <p className="text-white text-sm">{client.totalVisits}</p>
+
+                    <div className="flex items-center gap-3">
+                        {/* Desktop Status Badge */}
+                        <div className={`hidden md:block px-3 py-1 rounded-full text-xs ${
+                        client.status === 'active' 
+                            ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                            : 'bg-white/5 text-white/40 border border-white/10'
+                        }`}>
+                        {client.status === 'active' ? 'Ativo' : 'Inativo'}
+                        </div>
+                        
+                        <button className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/40 hover:text-white">
+                        <MoreVertical className="w-5 h-5" />
+                        </button>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs hidden md:block ${
-                      client.status === 'active' 
-                        ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                        : 'bg-white/5 text-white/40 border border-white/10'
-                    }`}>
-                      {client.status === 'active' ? 'Ativo' : 'Inativo'}
-                    </div>
-                    
-                    <button className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/40 hover:text-white">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
                   </div>
                 </div>
               </GlassCard>
