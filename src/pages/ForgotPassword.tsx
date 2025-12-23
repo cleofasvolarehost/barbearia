@@ -30,7 +30,7 @@ export default function ForgotPassword() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` // Optional for public functions usually
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
             },
             body: JSON.stringify({ email })
         });
