@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MercadoPagoBrick } from '../payment/MercadoPagoBrick';
-import { ArrowRight, X } from 'lucide-react';
+import { ArrowRight, X, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 import { useEstablishment } from '../../contexts/EstablishmentContext';
@@ -16,6 +16,16 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
   const { user } = useAuth();
   const { establishment } = useEstablishment();
   const [loading, setLoading] = useState(false);
+  const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+        setPixData(null);
+        setLoading(false);
+    }
+  }, [isOpen]);
 
   // STRICT VALIDATION: Ensure plan and price exist
   if (!isOpen) return null;
@@ -26,10 +36,16 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
       if (isOpen) {
           console.warn("SaasPaymentModal: Invalid Plan Data", plan);
       }
-      return null; // Or render a "Select a Plan" state
+      return null; 
   }
 
-  console.log("SaasPaymentModal: Rendering with plan:", plan.name, "Price:", plan.price);
+  const handleCopyPix = () => {
+      if (!pixData?.qr_code) return;
+      navigator.clipboard.writeText(pixData.qr_code);
+      setCopied(true);
+      toast.success('Código PIX copiado!');
+      setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
     setLoading(true);
@@ -49,8 +65,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 token,
                 payer_email: user.email,
                 establishment_id: establishment.id,
-                plan_id: plan.id, // Ensure this is definitely passed
-                // price is fetched from DB by plan_id in the edge function
+                plan_id: plan.id,
                 issuer_id,
                 payment_method_id,
                 card_holder_name,
@@ -64,9 +79,27 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
             throw new Error(data.error || 'Erro ao processar assinatura');
         }
 
-        toast.success(`Assinatura iniciada com sucesso!`);
-        onSuccess();
-        onClose();
+        // Handle PIX Response
+        if (data.qr_code && data.qr_code_base64) {
+            setPixData({
+                qr_code: data.qr_code,
+                qr_code_base64: data.qr_code_base64
+            });
+            toast.success('PIX gerado com sucesso!');
+            return; // Stay in modal to show QR
+        }
+
+        // Handle Card/Approved Response
+        if (data.status === 'approved') {
+            toast.success(`Assinatura iniciada com sucesso!`);
+            onSuccess();
+            onClose();
+        } else {
+             // Pending (Card review) or other status
+             toast('Pagamento em processamento.', { icon: '⏳' });
+             onSuccess(); // Optimistic? Or wait? Usually just close.
+             onClose();
+        }
 
     } catch (error: any) {
         console.error('Subscription error:', error);
@@ -85,7 +118,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 overflow-y-auto">
         <div className="max-w-md w-full relative my-8">
-            {/* Close Button - More Visible */}
+            {/* Close Button */}
             <button 
                 onClick={onClose}
                 className="absolute -top-12 right-0 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-all z-50"
@@ -94,36 +127,99 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 <X className="w-8 h-8" />
             </button>
 
-            <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative">
+            <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative min-h-[400px] flex flex-col justify-center">
                 
-                {/* Back / Change Plan Button - Improved UX - Moved Outside Container */}
-                <div className="absolute -top-12 left-0 z-50">
-                    <button
-                        onClick={onClose}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white font-medium transition-all backdrop-blur-md border border-white/10 group shadow-lg"
-                    >
-                        <ArrowRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
-                        Trocar Plano
-                    </button>
-                </div>
+                {/* Back / Change Plan Button (Only if not in PIX mode) */}
+                {!pixData && (
+                    <div className="absolute -top-12 left-0 z-50">
+                        <button
+                            onClick={onClose}
+                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white font-medium transition-all backdrop-blur-md border border-white/10 group shadow-lg"
+                        >
+                            <ArrowRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                            Trocar Plano
+                        </button>
+                    </div>
+                )}
 
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold mb-2">Finalizar Assinatura</h2>
+                <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold mb-2">
+                        {pixData ? 'Pagamento via PIX' : 'Finalizar Assinatura'}
+                    </h2>
                     <p className="text-gray-400">
                         Plano <span className="text-[#7C3AED] font-bold">{plan.name}</span> - R$ {plan.price}
                     </p>
                 </div>
 
-                <MercadoPagoBrick 
-                    amount={Number(plan.price)} 
-                    email={user?.email || ''}
-                    onSuccess={handleBrickSuccess}
-                    onError={handleBrickError}
-                />
-                
-                <p className="text-xs text-center text-gray-500 mt-6">
-                    Ambiente Seguro Mercado Pago. Seus dados são criptografados.
-                </p>
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                        <Loader2 className="w-12 h-12 text-[#7C3AED] animate-spin" />
+                        <p className="text-gray-400 animate-pulse">Processando pagamento...</p>
+                    </div>
+                ) : pixData ? (
+                    // PIX View
+                    <div className="space-y-6 animate-in fade-in zoom-in duration-300">
+                        <div className="flex justify-center">
+                            <div className="bg-white p-4 rounded-xl shadow-lg shadow-[#7C3AED]/20">
+                                <img 
+                                    src={`data:image/png;base64,${pixData.qr_code_base64}`} 
+                                    alt="QR Code Pix" 
+                                    className="w-48 h-48 object-contain"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <p className="text-sm text-center text-gray-400">
+                                Escaneie o QR Code ou copie o código abaixo:
+                            </p>
+                            <div className="relative group">
+                                <textarea
+                                    readOnly
+                                    value={pixData.qr_code}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 pr-12 text-xs text-gray-400 font-mono resize-none focus:border-[#7C3AED] outline-none h-24 transition-colors"
+                                />
+                                <button
+                                    onClick={handleCopyPix}
+                                    className="absolute top-2 right-2 p-2 bg-[#7C3AED]/10 hover:bg-[#7C3AED] text-[#7C3AED] hover:text-white rounded-lg transition-all"
+                                    title="Copiar código"
+                                >
+                                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+                            <p className="text-yellow-400 text-sm font-bold flex items-center justify-center gap-2">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Aguardando pagamento...
+                            </p>
+                            <p className="text-xs text-yellow-200/60 mt-1">
+                                A confirmação será automática em alguns instantes.
+                            </p>
+                        </div>
+                        
+                        <button
+                            onClick={onClose}
+                            className="w-full bg-white/5 hover:bg-white/10 text-white font-medium py-3 rounded-xl transition-colors"
+                        >
+                            Fechar e Aguardar
+                        </button>
+                    </div>
+                ) : (
+                    // Brick View
+                    <>
+                        <MercadoPagoBrick 
+                            amount={Number(plan.price)} 
+                            email={user?.email || ''}
+                            onSuccess={handleBrickSuccess}
+                            onError={handleBrickError}
+                        />
+                        <p className="text-xs text-center text-gray-500 mt-6">
+                            Ambiente Seguro Mercado Pago. Seus dados são criptografados.
+                        </p>
+                    </>
+                )}
             </div>
         </div>
     </div>

@@ -14,23 +14,42 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
+    // MP Webhook sends topic/id in query params for some events, or body for others.
+    // Usually for "payment", it's ?topic=payment&id=123
     const topic = url.searchParams.get('topic') || url.searchParams.get('type');
     const id = url.searchParams.get('id') || url.searchParams.get('data.id');
 
     console.log(`Webhook received: topic=${topic}, id=${id}`);
 
-    if (topic !== 'payment') {
+    // Some notifications come as body, but standard MP webhook for payments uses query params or body.
+    // If query params are empty, try parsing body
+    let bodyId = id;
+    let bodyTopic = topic;
+    
+    if (!id && req.body) {
+        try {
+            const body = await req.json();
+            bodyId = body.data?.id || body.id;
+            bodyTopic = body.type || body.topic;
+            console.log('Webhook Body:', body);
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    if (bodyTopic !== 'payment' && bodyTopic !== 'payment.created' && bodyTopic !== 'payment.updated') {
+        // Just return 200 to acknowledge
         return new Response('Ignored', { status: 200 });
     }
 
-    if (!id) {
+    if (!bodyId) {
         return new Response('Missing ID', { status: 400 });
     }
 
-    // Initialize Supabase
+    // Initialize Supabase with Service Role for Admin Actions
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get MP Access Token
     let mpAccessToken = '';
@@ -52,7 +71,7 @@ serve(async (req) => {
     }
 
     // Fetch Payment Data from MP
-    const response = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
+    const response = await fetch(`https://api.mercadopago.com/v1/payments/${bodyId}`, {
         headers: {
             'Authorization': `Bearer ${mpAccessToken}`
         }
@@ -64,56 +83,103 @@ serve(async (req) => {
     }
 
     const payment = await response.json();
-    console.log('Payment Status:', payment.status);
+    console.log('Payment Status:', payment.status, 'ID:', payment.id);
 
-    if (payment.status === 'approved' && payment.metadata && payment.metadata.type === 'saas_renewal') {
-        const { establishment_id, plan_id, plan_duration_days } = payment.metadata;
+    // Verify Metadata Type
+    const type = payment.metadata?.type;
+    const validTypes = ['saas_renewal', 'saas_subscription'];
+
+    if (validTypes.includes(type)) {
+        const { establishment_id, plan_id, plan_name } = payment.metadata;
         
-        console.log(`Processing Renewal for Establishment: ${establishment_id}, Days: ${plan_duration_days}`);
+        console.log(`Processing ${type} for Establishment: ${establishment_id}`);
 
-        // Get current establishment subscription info
-        const { data: establishment, error: fetchError } = await supabase
-            .from('establishments')
-            .select('subscription_end_date')
-            .eq('id', establishment_id)
-            .single();
+        if (payment.status === 'approved') {
+            // 1. Get Plan Details (for duration)
+            const { data: plan } = await supabase
+                .from('saas_plans')
+                .select('*')
+                .eq('id', plan_id)
+                .single();
+            
+            const daysToAdd = plan?.days_valid || 30;
+            const finalPlanName = plan_name || plan?.name || 'Pro';
 
-        if (fetchError) {
-             console.error('Establishment fetch error:', fetchError);
-             return new Response('DB Error', { status: 500 });
+            // 2. Calculate New End Date
+            // Get current establishment subscription info
+            const { data: establishment } = await supabase
+                .from('establishments')
+                .select('subscription_end_date')
+                .eq('id', establishment_id)
+                .single();
+
+            let newEndDate = new Date();
+            const currentEndDate = establishment?.subscription_end_date ? new Date(establishment.subscription_end_date) : null;
+
+            if (currentEndDate && currentEndDate > new Date()) {
+                // Extend from current end date
+                newEndDate = new Date(currentEndDate.getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
+            } else {
+                // Extend from now
+                newEndDate = new Date(new Date().getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
+            }
+
+            // 3. Update Establishment
+            await supabase
+                .from('establishments')
+                .update({
+                    subscription_status: 'active',
+                    subscription_plan: finalPlanName,
+                    subscription_end_date: newEndDate.toISOString()
+                })
+                .eq('id', establishment_id);
+
+            // 4. Update Subscriptions Table (Status -> Active)
+            // Use mp_payment_id to find the record
+            const { error: subUpdateError } = await supabase
+                .from('subscriptions')
+                .update({ 
+                    status: 'active', 
+                    updated_at: new Date().toISOString() 
+                })
+                .eq('mp_payment_id', String(bodyId));
+
+            if (subUpdateError) console.error('Subscription Update Error:', subUpdateError);
+
+            // 5. Insert into saas_payments (History)
+            // Check if already exists to avoid dupes (idempotency)
+            const { data: existingPayment } = await supabase
+                .from('saas_payments')
+                .select('id')
+                .eq('id', payment.id) // Assuming we might use MP ID as ID? No, saas_payments has uuid id.
+                // We don't have a unique constraint on mp_id in saas_payments?
+                // Let's check establishment_id + created_at similarity or just insert.
+                // Better: Add a column `mp_payment_id` to `saas_payments` later.
+                // For now, just insert.
+                .limit(1);
+
+            await supabase.from('saas_payments').insert({
+                establishment_id,
+                amount: payment.transaction_amount,
+                status: 'paid', // our internal status
+                payment_method: payment.payment_method_id,
+                invoice_url: payment.transaction_details?.external_resource_url 
+            });
+
+            console.log('Subscription Activated/Extended successfully');
+
+        } else if (payment.status === 'cancelled' || payment.status === 'rejected') {
+            // Update Subscription to Failed
+             await supabase
+                .from('subscriptions')
+                .update({ 
+                    status: 'failed', 
+                    updated_at: new Date().toISOString() 
+                })
+                .eq('mp_payment_id', String(bodyId));
+            
+            console.log('Subscription Payment Failed/Cancelled');
         }
-
-        let newEndDate = new Date();
-        const currentEndDate = establishment?.subscription_end_date ? new Date(establishment.subscription_end_date) : null;
-
-        if (currentEndDate && currentEndDate > new Date()) {
-            // Extend from current end date
-            newEndDate = new Date(currentEndDate.getTime() + (plan_duration_days * 24 * 60 * 60 * 1000));
-        } else {
-            // Extend from now
-            newEndDate = new Date(new Date().getTime() + (plan_duration_days * 24 * 60 * 60 * 1000));
-        }
-
-        // Fetch Plan Name
-        const { data: plan } = await supabase.from('saas_plans').select('name').eq('id', plan_id).single();
-        const planName = plan?.name || 'Pro';
-
-        // Update Establishment
-        const { error: updateError } = await supabase
-            .from('establishments')
-            .update({
-                subscription_status: 'active',
-                subscription_plan: planName,
-                subscription_end_date: newEndDate.toISOString()
-            })
-            .eq('id', establishment_id);
-
-        if (updateError) {
-            console.error('Update Error:', updateError);
-            return new Response('Update Failed', { status: 500 });
-        }
-
-        console.log('Subscription extended successfully');
     }
 
     return new Response('OK', { status: 200 });

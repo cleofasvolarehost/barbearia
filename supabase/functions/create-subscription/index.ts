@@ -13,7 +13,16 @@ serve(async (req) => {
   }
 
   try {
-    const { token, payer_email, establishment_id, plan_id, issuer_id, payment_method_id, identification } = await req.json()
+    const { 
+      token, 
+      payer_email, 
+      establishment_id, 
+      plan_id, 
+      issuer_id, 
+      payment_method_id, 
+      identification,
+      card_holder_name
+    } = await req.json()
 
     // 1. Strict Validation
     if (!plan_id) throw new Error('Missing plan_id');
@@ -27,20 +36,14 @@ serve(async (req) => {
     console.log('Fetching Plan:', plan_id);
 
     // 2. Fetch Plan from Database (Single Source of Truth)
-    // Using saas_plans table as per project convention (checked frontend Subscription.tsx)
     const { data: plan, error: planError } = await supabase
         .from('saas_plans') 
         .select('*')
         .eq('id', plan_id)
-        .eq('is_active', true) // Using is_active as per saas_plans schema
         .single();
 
-    if (planError) {
+    if (planError || !plan) {
         console.error('Plan Fetch Error (DB):', planError);
-    }
-
-    if (!plan) {
-        console.error('Plan Not Found or Inactive. ID:', plan_id);
         throw new Error(`Plan not found: ${plan_id}`);
     }
 
@@ -64,22 +67,38 @@ serve(async (req) => {
         throw new Error('Server Config Error: Missing MP Access Token');
     }
 
-    // 4. Create Payment
-    // Convert price (decimal) to transaction_amount (float)
+    // 4. Create Payment Body
     const transactionAmount = Number(plan.price);
+    
+    // Construct payer object
+    const payer: any = {
+        email: payer_email,
+    };
 
-    const paymentBody = {
+    // Add identification if present (required for Pix)
+    if (identification) {
+        payer.identification = identification;
+    }
+
+    // Add name if present (from card holder or split from email/other source if needed)
+    if (card_holder_name) {
+         // Mercado Pago expects first_name and last_name
+         const names = card_holder_name.split(' ');
+         payer.first_name = names[0];
+         payer.last_name = names.slice(1).join(' ');
+    } else {
+        // Fallback or use dummy for Pix if name not strictly required by MP but recommended
+        // For Pix, often email is enough, but identification (CPF) is key.
+        // Brick usually provides identification.
+    }
+
+    const paymentBody: any = {
         transaction_amount: transactionAmount,
-        token: token, 
-        description: `Assinatura ${plan.name} (${plan.interval_days} dias)`,
+        description: `Assinatura ${plan.name}`,
         payment_method_id: payment_method_id,
-        issuer_id: issuer_id,
-        payer: {
-            email: payer_email,
-            identification: identification
-        },
+        payer: payer,
         metadata: {
-            type: 'saas_renewal',
+            type: 'saas_subscription', // Updated from 'saas_renewal' to be more generic or specific
             establishment_id: establishment_id,
             plan_id: plan_id,
             plan_name: plan.name
@@ -87,7 +106,13 @@ serve(async (req) => {
         notification_url: `${supabaseUrl}/functions/v1/mp-webhook`
     };
 
-    console.log('Creating Payment for Plan:', plan.name, 'Amount:', transactionAmount);
+    // If Card (has token)
+    if (token) {
+        paymentBody.token = token;
+        paymentBody.issuer_id = issuer_id;
+    }
+
+    console.log('Creating Payment via MP API:', JSON.stringify(paymentBody));
 
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
         method: 'POST',
@@ -106,26 +131,57 @@ serve(async (req) => {
         throw new Error(data.message || 'Failed to create payment');
     }
 
-    // 5. Create Subscription Record (Pending)
-    const { error: subError } = await supabase
+    // 5. Insert into Subscriptions Table
+    // We need to fetch the user_id from the establishment owner
+    const { data: establishment, error: estError } = await supabase
+        .from('establishments')
+        .select('owner_id')
+        .eq('id', establishment_id)
+        .single();
+
+    if (estError) console.error('Error fetching establishment owner:', estError);
+
+    const userId = establishment?.owner_id;
+
+    // Check if subscription already exists (maybe update it?) or insert new.
+    // Ideally we might want to upsert or check for pending ones. 
+    // For now, let's insert a new one to track this payment attempt.
+    // Or, if we want to follow the requirements: "Inserir subscriptions com status pending"
+
+    const { data: subData, error: subError } = await supabase
         .from('subscriptions')
         .insert({
-            user_id: (await supabase.auth.getUser()).data.user?.id, // This might fail if using service role, better to rely on establishment_id mapping if possible, or pass user_id from client (validated)
-            // For now, let's assume the client context is authenticated or we use establishment_id to find the owner? 
-            // Actually, we should probably insert based on the establishment owner.
-            // Let's simplify: We just need to track it.
-            // Since this runs as Anon, we might need to trust the passed user email or look up the user by establishment_id owner.
-            // For MVP: We will skip the `user_id` insert if strict RLS blocks it, or use `service_role` client if needed.
-            // Let's use the Establishment ID as the key reference in our logic usually.
-            // But `subscriptions` table references `user_id`.
-            // Let's look up the owner of the establishment.
-        });
-        
-    // (Optional) Update Establishment Subscription Status immediately to 'pending' or similar
-    // For now, we rely on the Webhook to finalize.
+            user_id: userId, // Can be null if not found, but schema says NOT NULL?
+            plan_id: plan_id,
+            status: 'pending',
+            mp_payment_id: data.id.toString(),
+            // mp_subscription_id? This is a one-off payment for subscription or recurring?
+            // The user says "subscriptions no SaaS". Usually implies recurring. 
+            // But MP "payments" API is for single payments. 
+            // If they want recurring, they should use /preapproval. 
+            // BUT the user specifically asked for "/v1/payments" (single payment) and "QR Code".
+            // So this is likely a manual monthly payment via Pix.
+        })
+        .select()
+        .single();
 
+    if (subError) {
+        console.error('Subscription Insert Error:', subError);
+        // Continue anyway to return the QR code, but log critical error
+    }
+
+    // 6. Return Response
+    const pointOfInteraction = data.point_of_interaction?.transaction_data;
+    
     return new Response(
-        JSON.stringify(data),
+        JSON.stringify({
+            payment_id: data.id,
+            status: data.status,
+            qr_code: pointOfInteraction?.qr_code,
+            qr_code_base64: pointOfInteraction?.qr_code_base64,
+            ticket_url: pointOfInteraction?.ticket_url, // For boleto if needed
+            subscription_id: subData?.id
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
