@@ -7,52 +7,43 @@ import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { MercadoPagoBrick } from '../components/payment/MercadoPagoBrick';
 
-const PLANS = [
-  {
-    id: 'monthly',
-    name: 'Mensal',
-    price: 97,
-    period: 'mês',
-    savings: null,
-    features: ['Acesso total ao sistema', 'Até 5 profissionais', 'Suporte por email'],
-    highlight: false
-  },
-  {
-    id: 'quarterly',
-    name: 'Trimestral',
-    price: 270,
-    period: '3 meses',
-    savings: '10%',
-    features: ['Economize R$ 21,00', 'Prioridade no suporte', 'Badge de Verificado'],
-    highlight: true
-  },
-  {
-    id: 'annual',
-    name: 'Anual',
-    price: 970,
-    period: 'ano',
-    savings: '20%',
-    features: ['Economize R$ 194,00', 'Consultoria exclusiva', 'Acesso antecipado a features'],
-    highlight: false
-  }
-];
-
 export default function Subscription() {
   const { establishment, refreshEstablishment } = useEstablishment();
   const { user } = useAuth();
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [paymentStep, setPaymentStep] = useState<'plans' | 'payment'>('plans');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    fetchPlans();
+  }, []);
+
+  const fetchPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('saas_plans')
+        .select('*')
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+      
+      if (error) throw error;
+      setPlans(data || []);
+    } catch (error) {
+      console.error('Error fetching plans:', error);
+      toast.error('Erro ao carregar planos');
+    }
+  };
+
   const handleSelectPlan = (planId: string) => {
-    setSelectedPlan(planId);
+    setSelectedPlanId(planId);
     setPaymentStep('payment');
   };
 
   const handleBrickSuccess = async (token: string, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
     setLoading(true);
     try {
-        if (!establishment || !selectedPlan || !user?.email) return;
+        if (!establishment || !selectedPlanId || !user?.email) return;
 
         // Call Edge Function to create subscription
         const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
@@ -64,7 +55,7 @@ export default function Subscription() {
             body: JSON.stringify({
                 token,
                 payer_email: user.email,
-                plan_type: selectedPlan,
+                plan_id: selectedPlanId, // Changed from plan_type to plan_id
                 issuer_id,
                 payment_method_id,
                 card_holder_name,
@@ -78,20 +69,12 @@ export default function Subscription() {
             throw new Error(data.error || 'Erro ao processar assinatura');
         }
 
-        // Success logic
-        // We might want to update the local establishment status immediately for better UX
-        // ideally webhook handles this, but we can do a manual update via another edge function or RLS if allowed.
-        // For now, let's assume the backend/webhook will sync, but we show success.
+        toast.success(`Assinatura iniciada com sucesso!`);
         
-        // Optimistic update (optional, usually safer to wait for webhook)
-        // But for user feedback:
-        toast.success(`Assinatura ${selectedPlan} iniciada com sucesso!`);
-        
-        // Refresh to see if status changed (if webhook was instant)
         setTimeout(() => refreshEstablishment(), 2000);
         
         setPaymentStep('plans');
-        setSelectedPlan(null);
+        setSelectedPlanId(null);
 
     } catch (error: any) {
         console.error('Subscription error:', error);
@@ -106,14 +89,21 @@ export default function Subscription() {
       toast.error('Erro no processamento do cartão. Tente novamente.');
   };
 
-  const currentPlan = PLANS.find(p => p.id === establishment?.subscription_plan) || PLANS[0];
   const isExpired = establishment?.subscription_end_date && new Date(establishment.subscription_end_date) < new Date();
   const daysRemaining = establishment?.subscription_end_date 
     ? Math.ceil((new Date(establishment.subscription_end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) 
     : 0;
 
-  if (paymentStep === 'payment' && selectedPlan) {
-      const plan = PLANS.find(p => p.id === selectedPlan);
+  const getPeriodLabel = (days: number) => {
+    if (days === 30) return 'mês';
+    if (days === 90) return '3 meses';
+    if (days === 180) return '6 meses';
+    if (days === 365) return 'ano';
+    return `${days} dias`;
+  };
+
+  if (paymentStep === 'payment' && selectedPlanId) {
+      const plan = plans.find(p => p.id === selectedPlanId);
       return (
         <div className="min-h-screen bg-[#121212] text-white p-4 md:p-8 flex flex-col items-center justify-center">
             <div className="max-w-md w-full">
@@ -133,7 +123,7 @@ export default function Subscription() {
                     </div>
 
                     <MercadoPagoBrick 
-                        amount={plan?.price || 100}
+                        amount={plan?.price || 0}
                         email={user?.email || ''}
                         onSuccess={handleBrickSuccess}
                         onError={handleBrickError}
@@ -202,27 +192,21 @@ export default function Subscription() {
 
         {/* Plans Grid */}
         <div className="grid md:grid-cols-3 gap-8">
-          {PLANS.map((plan, index) => (
+          {plans.map((plan, index) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               className={`relative p-8 rounded-3xl border flex flex-col ${
-                plan.highlight
+                plan.is_recommended
                   ? 'bg-gradient-to-b from-[#7C3AED]/10 to-transparent border-[#7C3AED] shadow-2xl shadow-[#7C3AED]/20 scale-105 z-10'
                   : 'bg-white/5 backdrop-blur border-white/10 hover:bg-white/10'
               }`}
             >
-              {plan.highlight && (
+              {plan.is_recommended && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-sm font-bold shadow-lg">
                   Mais Popular
-                </div>
-              )}
-              
-              {plan.savings && (
-                <div className="absolute top-4 right-4 px-2 py-1 rounded-lg bg-[#10B981]/20 border border-[#10B981]/30 text-xs font-bold text-[#10B981]">
-                  Economize {plan.savings}
                 </div>
               )}
 
@@ -231,12 +215,13 @@ export default function Subscription() {
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm text-gray-400">R$</span>
                   <span className="text-4xl font-black text-white">{plan.price}</span>
-                  <span className="text-gray-400">/{plan.period}</span>
+                  <span className="text-gray-400">/{getPeriodLabel(plan.interval_days)}</span>
                 </div>
+                <p className="text-sm text-gray-400 mt-2">{plan.description}</p>
               </div>
 
               <ul className="space-y-4 mb-8 flex-1">
-                {plan.features.map((feature, i) => (
+                {Array.isArray(plan.features) && plan.features.map((feature: string, i: number) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
                     <Check className="w-5 h-5 text-[#2DD4BF] flex-shrink-0" />
                     {feature}
@@ -247,7 +232,7 @@ export default function Subscription() {
               <button
                 onClick={() => handleSelectPlan(plan.id)}
                 className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                  plan.highlight
+                  plan.is_recommended
                     ? 'bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-lg hover:shadow-[#7C3AED]/50 text-white'
                     : 'bg-white/10 hover:bg-white/20 text-white'
                 }`}

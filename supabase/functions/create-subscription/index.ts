@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,31 +12,43 @@ serve(async (req) => {
   }
 
   try {
-    const { token, payer_email, plan_type } = await req.json()
+    const { token, payer_email, plan_id, plan_type } = await req.json()
+    const targetPlanId = plan_id || plan_type; // Support both for backward compatibility or transition
 
-    // Map plan_type to frequency/amount
-    let transaction_amount = 0;
+    if (!targetPlanId) {
+        throw new Error('Missing plan_id');
+    }
+
+    // Initialize Supabase Client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Fetch Plan from DB
+    const { data: plan, error: planError } = await supabase
+        .from('saas_plans')
+        .select('*')
+        .eq('id', targetPlanId)
+        .single();
+
+    if (planError || !plan) {
+        throw new Error('Invalid plan or plan not found');
+    }
+
+    // Calculate Frequency
     let frequency = 1;
     let frequency_type = 'months';
-    let reason = 'Assinatura BarberPro';
 
-    // Prices matching the UI
-    switch(plan_type) {
-        case 'monthly':
-            transaction_amount = 97.00;
-            frequency = 1;
-            break;
-        case 'quarterly':
-            transaction_amount = 267.00; // 89 * 3
-            frequency = 3;
-            break;
-        case 'annual':
-            transaction_amount = 948.00; // 79 * 12
-            frequency = 12;
-            break;
-        default:
-            throw new Error('Invalid plan type');
+    if (plan.interval_days % 30 === 0) {
+        frequency = plan.interval_days / 30;
+        frequency_type = 'months';
+    } else {
+        frequency = plan.interval_days;
+        frequency_type = 'days';
     }
+
+    const transaction_amount = Number(plan.price);
+    const reason = `Assinatura ${plan.name}`;
 
     const mpAccessToken = Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN');
     if (!mpAccessToken) {
@@ -49,7 +62,7 @@ serve(async (req) => {
       payer_email: payer_email,
       back_url: 'https://www.crdev.app/admin/subscription',
       reason: reason,
-      external_reference: plan_type,
+      external_reference: targetPlanId,
       auto_recurring: {
         frequency: frequency,
         frequency_type: frequency_type,

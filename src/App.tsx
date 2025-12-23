@@ -34,6 +34,7 @@ import SuperAdminGateways from "./pages/super-admin/Gateways";
 import SuperAdminDashboard from "./pages/super-admin/Dashboard";
 import SuperAdminTenants from "./pages/super-admin/Tenants";
 import SuperAdminSubscriptions from "./pages/super-admin/Subscriptions";
+import SuperAdminPlans from "./pages/super-admin/Plans";
 import SuperAdminSystem from "./pages/super-admin/System";
 import SuperAdminUsers from "./pages/super-admin/Users";
 import Subscription from "./pages/Subscription";
@@ -147,6 +148,7 @@ function App() {
                 <Route path="/super-admin/tenants" element={<SuperAdminTenants />} />
                 <Route path="/super-admin/users" element={<SuperAdminUsers />} />
                 <Route path="/super-admin/subscriptions" element={<SuperAdminSubscriptions />} />
+                <Route path="/super-admin/plans" element={<SuperAdminPlans />} />
                 <Route path="/super-admin/gateways" element={<SuperAdminGateways />} />
                 <Route path="/super-admin/system" element={<SuperAdminSystem />} />
               </Route>
