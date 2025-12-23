@@ -17,14 +17,26 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
   const { establishment } = useEstablishment();
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen || !plan) return null;
+  // STRICT VALIDATION: Ensure plan and price exist
+  if (!isOpen) return null;
 
-  console.log("SaasPaymentModal: Rendering with price:", plan.price);
+  const isValidPlan = plan && plan.id && plan.price_cents > 0;
+  
+  if (!isValidPlan) {
+      if (isOpen) {
+          console.warn("SaasPaymentModal: Invalid Plan Data", plan);
+      }
+      return null; // Or render a "Select a Plan" state
+  }
+
+  console.log("SaasPaymentModal: Rendering with plan:", plan.name, "Price:", plan.price);
 
   const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
     setLoading(true);
     try {
         if (!establishment || !user?.email) return;
+
+        console.log('Creating subscription with plan_id=', plan.id, 'price_cents=', plan.price_cents);
 
         // Call Edge Function to create subscription
         const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
@@ -38,6 +50,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 payer_email: user.email,
                 establishment_id: establishment.id,
                 plan_id: plan.id, // Ensure this is definitely passed
+                price_cents: plan.price_cents, // Pass price for validation
                 issuer_id,
                 payment_method_id,
                 card_holder_name,
@@ -88,7 +101,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 </div>
 
                 <MercadoPagoBrick 
-                    amount={Number(plan.price) || 0}
+                    amount={Number(plan.price)} // Using pre-formatted price string from parent
                     email={user?.email || ''}
                     onSuccess={handleBrickSuccess}
                     onError={handleBrickError}

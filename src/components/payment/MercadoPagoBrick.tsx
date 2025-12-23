@@ -47,16 +47,16 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
     
     // Check Amount Validity
     // FAILSAFE: If amount is 0, force 1.00 for testing/preventing UI block
-    const finalAmount = amount > 0 ? amount : 1.00;
+    // REMOVED FALLBACK: Strict Mode for Production
+    // const finalAmount = amount > 0 ? amount : 1.00;
     
     if (amount <= 0) {
-        console.warn('Brick Init: Amount was 0, forced to 1.00 for debugging.');
+        console.warn('Brick Init: Amount is 0 or invalid. Brick will NOT initialize.');
+        setInitError('Erro: Valor do plano inválido.');
+        return;
     }
 
-    if (!finalAmount || finalAmount <= 0) {
-        console.warn('Brick Init: Amount is invalid or missing:', finalAmount);
-        return; 
-    }
+    const finalAmount = amount;
 
     // Only init if container is empty to avoid duplication
     const container = document.getElementById('paymentBrick_container');

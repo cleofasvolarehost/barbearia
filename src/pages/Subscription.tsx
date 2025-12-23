@@ -20,14 +20,24 @@ export default function Subscription() {
 
   const fetchPlans = async () => {
     try {
+      // Changed from 'saas_plans' to 'plans' based on new schema
       const { data, error } = await supabase
-        .from('saas_plans')
+        .from('plans')
         .select('*')
-        .eq('is_active', true)
-        .order('price', { ascending: true });
+        .eq('active', true)
+        .order('price_cents', { ascending: true });
       
       if (error) throw error;
-      setPlans(data || []);
+      
+      // Transform data to match UI expectations (price_cents -> price formatted)
+      const formattedPlans = (data || []).map(p => ({
+          ...p,
+          price: (p.price_cents / 100).toFixed(2), // Convert cents to string "29.90"
+          interval_days: p.interval === 'month' ? 30 : 365,
+          features: ['Gestão de Agendamentos', 'Controle Financeiro', 'Suporte Prioritário'] // Mock features for now
+      }));
+
+      setPlans(formattedPlans);
     } catch (error) {
       console.error('Error fetching plans:', error);
       toast.error('Erro ao carregar planos');
@@ -35,7 +45,7 @@ export default function Subscription() {
   };
 
   const handleSelectPlan = (plan: any) => {
-    console.log("Passing Price to Modal:", plan.price);
+    console.log("Passing Plan to Modal:", plan);
     setSelectedPlan(plan);
     setIsPaymentModalOpen(true);
   };
