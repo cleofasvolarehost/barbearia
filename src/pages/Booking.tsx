@@ -350,8 +350,8 @@ export default function Booking() {
                 // Continue? Maybe safer to block or ask
             }
 
-            // If no phone found or empty string
-            if (!userProfile?.telefone) {
+            // Strict Phone Gate: Check for existence and length (min 10 chars for (XX) XXXX-XXXX)
+            if (!userProfile?.telefone || userProfile.telefone.length < 10) {
                 setLoading(false);
                 setIsPhoneModalOpen(true);
                 return; // STOP BOOKING

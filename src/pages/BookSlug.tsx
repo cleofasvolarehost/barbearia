@@ -148,22 +148,25 @@ export default function BookSlug() {
         const clientName = user?.user_metadata?.nome || guestData?.name;
 
         // 1. Golden Rule: Validate Phone for Authenticated Users
-        if (user && !clientPhone) {
-            // Check DB to be sure (metadata might be stale)
+        if (user) {
+            // Always check DB to be sure and get the latest phone
             const { data: dbUser } = await supabase
                 .from('usuarios')
                 .select('telefone')
                 .eq('id', user.id)
                 .single();
             
-            if (dbUser?.telefone) {
-                clientPhone = dbUser.telefone;
-            } else {
-                // STOP and Ask for Phone
+            const dbPhone = dbUser?.telefone;
+            
+            // Strict Validation: Must exist and have at least 10 chars (DD + 8 digits)
+            if (!dbPhone || dbPhone.length < 10) {
+                console.log('Phone Gate: Intercepting booking due to missing phone');
+                setPendingPaymentMethod(method);
                 setIsProcessing(false);
                 setIsPhoneModalOpen(true);
                 return;
             }
+            clientPhone = dbPhone;
         }
 
         // Guest User Logic
