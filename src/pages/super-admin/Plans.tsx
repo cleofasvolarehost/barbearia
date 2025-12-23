@@ -273,13 +273,13 @@ export default function AdminPlans() {
                         interval_days: val === 'custom' ? '' : val
                       });
                     }}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-[#7C3AED] outline-none"
+                    className="w-full bg-[#121212] border border-white/10 rounded-lg px-4 py-2 text-white focus:border-[#7C3AED] outline-none"
                   >
-                    <option value="30">Mensal (30 dias)</option>
-                    <option value="90">Trimestral (90 dias)</option>
-                    <option value="180">Semestral (180 dias)</option>
-                    <option value="365">Anual (365 dias)</option>
-                    <option value="custom">Personalizado</option>
+                    <option value="30" className="bg-[#121212] text-white">Mensal (30 dias)</option>
+                    <option value="90" className="bg-[#121212] text-white">Trimestral (90 dias)</option>
+                    <option value="180" className="bg-[#121212] text-white">Semestral (180 dias)</option>
+                    <option value="365" className="bg-[#121212] text-white">Anual (365 dias)</option>
+                    <option value="custom" className="bg-[#121212] text-white">Personalizado</option>
                   </select>
                 </div>
               </div>

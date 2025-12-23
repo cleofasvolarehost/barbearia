@@ -16,18 +16,14 @@ export default function SuperAdminUsers() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState<string | null>(null); // userId
     const [showEditModal, setShowEditModal] = useState<any | null>(null); // user object
+    const [showActionSheet, setShowActionSheet] = useState<any | null>(null); // user object for action sheet
 
     // Form States
     const [newUser, setNewUser] = useState({ nome: '', email: '', password: '', telefone: '', tipo: 'client', establishment_id: '' });
     const [newPassword, setNewPassword] = useState('');
-    const [activeActionId, setActiveActionId] = useState<string | null>(null); // For dropdown
 
     useEffect(() => {
         fetchData();
-        // Click outside listener for dropdowns
-        const handleClickOutside = () => setActiveActionId(null);
-        document.addEventListener('click', handleClickOutside);
-        return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
     const fetchData = async () => {
@@ -278,27 +274,12 @@ export default function SuperAdminUsers() {
                                             </button>
                                             
                                             <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setActiveActionId(activeActionId === user.id ? null : user.id);
-                                                }}
+                                                onClick={() => setShowActionSheet(user)}
                                                 className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
                                             >
                                                 <MoreVertical className="w-4 h-4" />
                                             </button>
                                         </div>
-                                        
-                                        {/* Dropdown Menu */}
-                                        {activeActionId === user.id && (
-                                            <div className="absolute right-4 top-12 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
-                                                <button onClick={() => setShowEditModal(user)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
-                                                    <Edit className="w-4 h-4 text-blue-400" /> Editar Dados
-                                                </button>
-                                                <button onClick={() => handleSuspend(user.id, user.banned)} className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-2 text-sm text-white">
-                                                    <Ban className="w-4 h-4 text-orange-400" /> {user.banned ? 'Ativar' : 'Suspender'}
-                                                </button>
-                                            </div>
-                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -306,6 +287,52 @@ export default function SuperAdminUsers() {
                     </table>
                 </div>
             </GlassCard>
+
+            {/* Action Sheet Modal */}
+            {showActionSheet && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowActionSheet(null)}>
+                    <div className="bg-[#1e1e1e] border border-white/10 rounded-2xl w-full max-w-sm p-4 space-y-2" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-3 p-3 border-b border-white/10 mb-2">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white font-bold shrink-0">
+                                {showActionSheet.nome?.substring(0,2).toUpperCase() || '??'}
+                            </div>
+                            <div>
+                                <div className="text-white font-medium">{showActionSheet.nome || 'Sem Nome'}</div>
+                                <div className="text-xs text-gray-500">{showActionSheet.email}</div>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => {
+                                setShowEditModal(showActionSheet);
+                                setShowActionSheet(null);
+                            }} 
+                            className="w-full text-left px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-3 text-white transition-colors"
+                        >
+                            <Edit className="w-5 h-5 text-blue-400" /> 
+                            <span className="font-medium">Editar Dados</span>
+                        </button>
+
+                        <button 
+                            onClick={() => {
+                                handleSuspend(showActionSheet.id, showActionSheet.banned);
+                                setShowActionSheet(null);
+                            }} 
+                            className="w-full text-left px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-3 text-white transition-colors"
+                        >
+                            <Ban className={`w-5 h-5 ${showActionSheet.banned ? 'text-green-400' : 'text-orange-400'}`} /> 
+                            <span className="font-medium">{showActionSheet.banned ? 'Reativar Usuário' : 'Suspender Usuário'}</span>
+                        </button>
+                        
+                         <button 
+                            onClick={() => setShowActionSheet(null)} 
+                            className="w-full text-center px-4 py-3 mt-2 text-gray-500 hover:text-white transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Create User Modal */}
             {showCreateModal && (
