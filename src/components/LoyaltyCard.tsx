@@ -67,7 +67,7 @@ export function LoyaltyCard({ onBack }: LoyaltyCardProps) {
         // For now, let's assume points <= 10. If > 10, it implies unredeemed rewards.
         
         const effectivePoints = card.points % totalCuts;
-        const rewards = Math.floor(card.points / totalCuts) - (card.rewards_redeemed || 0);
+        const rewards = Math.floor(card.points / totalCuts);
         
         setCurrentCuts(effectivePoints === 0 && card.points > 0 && rewards > 0 ? totalCuts : effectivePoints); 
         // Logic: if 10 points, show full card.

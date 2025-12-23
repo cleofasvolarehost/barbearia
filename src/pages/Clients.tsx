@@ -180,19 +180,19 @@ export default function Clients() {
     if (!confirm('Confirmar resgate do prêmio? Isso descontará 10 pontos do cliente.')) return;
 
     try {
-        const { error } = await supabase.rpc('redeem_loyalty_points', {
-            p_user_id: clientId,
-            p_establishment_id: establishment?.id,
-            p_points: 10
-        });
+      const { error } = await supabase.rpc('redeem_loyalty_points', {
+        p_user_id: clientId,
+        p_establishment_id: establishment?.id,
+        p_points: 10
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        toast.success('Prêmio resgatado com sucesso!');
-        fetchClients(); // Refresh list
+      toast.success('Prêmio resgatado com sucesso!');
+      fetchClients(); // Refresh list
     } catch (error: any) {
-        console.error('Error redeeming:', error);
-        toast.error('Erro ao resgatar prêmio: ' + error.message);
+      console.error('Error redeeming:', error);
+      toast.error('Erro ao resgatar prêmio: ' + error.message);
     }
   };
 
