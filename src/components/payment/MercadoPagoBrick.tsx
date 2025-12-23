@@ -45,6 +45,12 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
   const initializeBrick = async () => {
     if (!window.MercadoPago) return;
     
+    // Check Amount Validity
+    if (!amount || amount <= 0) {
+        console.warn('Brick Init: Amount is invalid or missing:', amount);
+        return; 
+    }
+
     // Only init if container is empty to avoid duplication
     const container = document.getElementById('paymentBrick_container');
     if (container && container.innerHTML !== '') return;
