@@ -18,7 +18,7 @@ import Home from "./pages/Home";
 import LandingPage from "./pages/LandingPage"; // Import da Landing Page de Venda
 import BookSlug from "./pages/BookSlug";
 import { RescueCenter } from "./components/RescueCenter";
-import WhatsAppSettings from "./pages/WhatsAppSettings";
+import WhatsAppSettings from "./pages/admin/WhatsAppSettings";
 import { LoyaltyCard } from "./components/LoyaltyCard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import MyAppointments from "./pages/MyAppointments"; // Import New Page

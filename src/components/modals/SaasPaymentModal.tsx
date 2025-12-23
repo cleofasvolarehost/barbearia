@@ -83,17 +83,29 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
-        <div className="max-w-md w-full relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 overflow-y-auto">
+        <div className="max-w-md w-full relative my-8">
+            {/* Close Button - More Visible */}
             <button 
                 onClick={onClose}
-                className="absolute -top-12 right-0 text-gray-400 hover:text-white transition-colors"
+                className="absolute -top-12 right-0 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-all z-50"
+                aria-label="Fechar"
             >
-                <X className="w-6 h-6" />
+                <X className="w-8 h-8" />
             </button>
 
-            <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-8 shadow-2xl">
-                <div className="text-center mb-8">
+            <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative">
+                
+                {/* Back / Change Plan Button */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-6 left-6 text-sm text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+                >
+                    <ArrowRight className="w-4 h-4 rotate-180" />
+                    Trocar Plano
+                </button>
+
+                <div className="text-center mb-8 mt-4">
                     <h2 className="text-2xl font-bold mb-2">Finalizar Assinatura</h2>
                     <p className="text-gray-400">
                         Plano <span className="text-[#7C3AED] font-bold">{plan.name}</span> - R$ {plan.price}
@@ -101,7 +113,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 </div>
 
                 <MercadoPagoBrick 
-                    amount={Number(plan.price)} // Using pre-formatted price string from parent
+                    amount={Number(plan.price)} 
                     email={user?.email || ''}
                     onSuccess={handleBrickSuccess}
                     onError={handleBrickError}
