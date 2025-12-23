@@ -13,6 +13,7 @@ export default function AdminAppointmentsPage() {
   const { establishment } = useEstablishment();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
@@ -43,12 +44,14 @@ export default function AdminAppointmentsPage() {
 
   const fetchAppointments = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data, count } = await appointmentsService.listAppointments(filters);
       setAppointments(data);
       if (count !== null) setTotalCount(count);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching appointments:', error);
+      setError(error.message || 'Erro ao carregar agendamentos');
     } finally {
       setLoading(false);
     }
@@ -217,6 +220,19 @@ export default function AdminAppointmentsPage() {
         </div>
 
         {/* Content */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-red-400">
+            <p className="font-bold">Erro ao carregar agendamentos:</p>
+            <p>{error}</p>
+            <button 
+              onClick={fetchAppointments}
+              className="mt-2 text-sm underline hover:text-red-300"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
         {viewMode === 'list' ? (
           <>
             <AppointmentsTable

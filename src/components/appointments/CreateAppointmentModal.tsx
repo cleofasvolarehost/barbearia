@@ -102,7 +102,7 @@ export function CreateAppointmentModal({ isOpen, onClose, onSuccess, barbershopI
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     try {
-      const startsAt = `${data.date}T${data.time}:00`;
+      const startsAt = formatISO(parseISO(`${data.date}T${data.time}:00`));
       
       await appointmentsService.createAppointment({
         barbershop_id: barbershopId,
