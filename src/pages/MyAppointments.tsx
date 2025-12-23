@@ -57,7 +57,7 @@ export default function MyAppointments() {
             horario,
             status,
             preco_total,
-            barbeiro:barbeiros(nome, nome_barbearia, foto_url, whatsapp_config),
+            barbeiro:barbeiros(nome, nome_barbearia, foto_url, whatsapp_config, establishment:establishments(slug)),
             servicos:agendamentos_servicos(servicos(nome))
             `)
             .eq('usuario_id', user.id)
@@ -68,6 +68,8 @@ export default function MyAppointments() {
             
         // Filter strictly in JS to be safe with time
         // ... (existing logic can be simplified if backend filter is good)
+        // @ts-ignore
+        if (upcomingData) setAppointments(upcomingData);
       }
 
       // 2. Fetch History (Paginated)
@@ -82,7 +84,7 @@ export default function MyAppointments() {
           horario,
           status,
           preco_total,
-          barbeiro:barbeiros(nome, nome_barbearia, foto_url, whatsapp_config),
+          barbeiro:barbeiros(nome, nome_barbearia, foto_url, whatsapp_config, establishment:establishments(slug)),
           servicos:agendamentos_servicos(servicos(nome))
         `, { count: 'exact' })
         .eq('usuario_id', user.id)
@@ -98,9 +100,18 @@ export default function MyAppointments() {
       if (isLoadMore) {
           setAppointments(prev => [...prev, ...newHistory]);
       } else {
-          // If first load, we need to merge with upcoming if we kept them in same state, 
-          // BUT for pagination it is better to separate states.
-          // Let's refactor to use two state variables for clarity.
+          // Merge if first load (if logic requires, but here we overwrite/append properly usually)
+          // For simplicity in this fix, we just set appointments if not load more, but we already set upcoming above.
+          // We need to merge them.
+          if (!isLoadMore) {
+              // @ts-ignore
+              setAppointments(prev => {
+                  // Avoid duplicates if any overlap (unlikely due to status filter)
+                  const combined = [...(prev || []), ...newHistory];
+                  // Dedup by ID just in case
+                  return Array.from(new Map(combined.map(item => [item.id, item])).values());
+              });
+          }
       }
       
       if (newHistory.length < PAGE_SIZE) {
@@ -203,7 +214,22 @@ export default function MyAppointments() {
                 </div>
                 <p className="text-gray-400">Nenhum agendamento encontrado.</p>
                 {activeTab === 'upcoming' && (
-                    <button onClick={() => navigate('/barbearia-modelo')} className="mt-4 px-6 py-2 bg-[#2DD4BF] text-black font-bold rounded-full hover:opacity-90 transition-opacity">
+                    <button 
+                        onClick={() => {
+                            // Try to find slug from any appointment in history
+                            // @ts-ignore
+                            const slug = appointments.find(a => a.barbeiro?.establishment?.slug)?.barbeiro?.establishment?.slug;
+                            
+                            if (slug) {
+                                navigate(`/${slug}`);
+                            } else {
+                                // Fallback: If we can't find a slug, maybe go to a generic search or landing
+                                // ideally we shouldn't show this button if we don't know the shop
+                                toast.error('Você ainda não tem histórico em nenhuma barbearia.');
+                            }
+                        }}
+                        className="mt-4 px-6 py-2 bg-[#2DD4BF] text-black font-bold rounded-full hover:opacity-90 transition-opacity"
+                    >
                         Agendar Novo
                     </button>
                 )}

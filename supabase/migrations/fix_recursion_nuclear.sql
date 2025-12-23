@@ -17,6 +17,9 @@ DROP POLICY IF EXISTS "Users can update their own data" ON public.usuarios;
 DROP POLICY IF EXISTS "Self Read" ON public.usuarios;
 DROP POLICY IF EXISTS "Self Update" ON public.usuarios;
 DROP POLICY IF EXISTS "Self Insert" ON public.usuarios;
+DROP POLICY IF EXISTS "Safe Self Read" ON public.usuarios;
+DROP POLICY IF EXISTS "Safe Self Update" ON public.usuarios;
+DROP POLICY IF EXISTS "Safe Self Insert" ON public.usuarios;
 
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 
