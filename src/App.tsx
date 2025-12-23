@@ -28,6 +28,7 @@ import AdminServices from "./pages/AdminServices";
 import AdminPlans from "./pages/AdminPlans";
 import AdminTeam from "./pages/AdminTeam";
 import AdminBranding from "./pages/AdminBranding"; // Import AdminBranding
+import AdminAppointmentsPage from "./pages/admin/Appointments";
 import GeneralSettings from "./pages/GeneralSettings"; // Import GeneralSettings
 import PaymentSettings from "./pages/PaymentSettings"; // Import PaymentSettings
 import SuperAdminGateways from "./pages/super-admin/Gateways";
