@@ -5,15 +5,14 @@ import { useEstablishment } from '../contexts/EstablishmentContext';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
-import { MercadoPagoBrick } from '../components/payment/MercadoPagoBrick';
+import { SaasPaymentModal } from '../components/modals/SaasPaymentModal';
 
 export default function Subscription() {
   const { establishment, refreshEstablishment } = useEstablishment();
   const { user } = useAuth();
   const [plans, setPlans] = useState<any[]>([]);
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [paymentStep, setPaymentStep] = useState<'plans' | 'payment'>('plans');
-  const [loading, setLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     fetchPlans();
@@ -35,60 +34,14 @@ export default function Subscription() {
     }
   };
 
-  const handleSelectPlan = (planId: string) => {
-    setSelectedPlanId(planId);
-    setPaymentStep('payment');
+  const handleSelectPlan = (plan: any) => {
+    setSelectedPlan(plan);
+    setIsPaymentModalOpen(true);
   };
 
-  const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
-    setLoading(true);
-    try {
-        if (!establishment || !selectedPlanId || !user?.email) return;
-
-        // Call Edge Function to create subscription
-        const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-            },
-            body: JSON.stringify({
-                token,
-                payer_email: user.email,
-                establishment_id: establishment?.id,
-                plan_id: selectedPlanId, // Changed from plan_type to plan_id
-                issuer_id,
-                payment_method_id,
-                card_holder_name,
-                identification
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao processar assinatura');
-        }
-
-        toast.success(`Assinatura iniciada com sucesso!`);
-        
-        setTimeout(() => refreshEstablishment(), 2000);
-        
-        setPaymentStep('plans');
-        setSelectedPlanId(null);
-
-    } catch (error: any) {
-        console.error('Subscription error:', error);
-        toast.error(`Erro: ${error.message}`);
-    } finally {
-        setLoading(false);
-    }
-  };
-
-  const handleBrickError = (error: any) => {
-      console.error('Brick Error:', error);
-      const msg = typeof error === 'string' ? error : 'Erro no processamento do cartão. Tente novamente.';
-      toast.error(msg);
+  const handlePaymentSuccess = () => {
+      refreshEstablishment();
+      // Optionally redirect or show confetti
   };
 
   const isExpired = establishment?.subscription_end_date && new Date(establishment.subscription_end_date) < new Date();
@@ -104,45 +57,17 @@ export default function Subscription() {
     return `${days} dias`;
   };
 
-  if (paymentStep === 'payment' && selectedPlanId) {
-      const plan = plans.find(p => p.id === selectedPlanId);
-      return (
-        <div className="min-h-screen bg-[#121212] text-white p-4 md:p-8 flex flex-col items-center justify-center">
-            <div className="max-w-md w-full">
-                <button 
-                    onClick={() => setPaymentStep('plans')}
-                    className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-                >
-                    <ArrowRight className="w-4 h-4 rotate-180" /> Voltar aos planos
-                </button>
-
-                <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-8 shadow-2xl">
-                    <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold mb-2">Finalizar Assinatura</h2>
-                        <p className="text-gray-400">
-                            Plano <span className="text-[#7C3AED] font-bold">{plan?.name}</span> - R$ {plan?.price}
-                        </p>
-                    </div>
-
-                    <MercadoPagoBrick 
-                        amount={plan?.price || 0}
-                        email={user?.email || ''}
-                        onSuccess={handleBrickSuccess}
-                        onError={handleBrickError}
-                    />
-                    
-                    <p className="text-xs text-center text-gray-500 mt-6">
-                        Ambiente Seguro Mercado Pago. Seus dados são criptografados.
-                    </p>
-                </div>
-            </div>
-        </div>
-      );
-  }
-
   return (
     <div className="min-h-screen bg-[#121212] text-white p-4 md:p-8 pb-32">
+      <SaasPaymentModal 
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        plan={selectedPlan}
+        onSuccess={handlePaymentSuccess}
+      />
+
       <div className="max-w-6xl mx-auto">
+
         {/* Header */}
         <div className="text-center mb-12">
           <motion.div

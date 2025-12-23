@@ -491,6 +491,21 @@ export default function SuperAdminTenants() {
                                             />
                                         </div>
                                     </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Senha do Dono</label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                            <input 
+                                                type="password"
+                                                required
+                                                minLength={6}
+                                                value={newShop.ownerPassword}
+                                                onChange={e => setNewShop({...newShop, ownerPassword: e.target.value})}
+                                                className="w-full bg-black/20 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white focus:border-[#7C3AED] outline-none"
+                                                placeholder="Mínimo 6 caracteres"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
