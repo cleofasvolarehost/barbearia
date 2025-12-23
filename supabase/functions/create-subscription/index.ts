@@ -21,7 +21,8 @@ serve(async (req) => {
       issuer_id, 
       payment_method_id, 
       identification,
-      card_holder_name
+      card_holder_name,
+      installments
     } = await req.json()
 
     // 1. Strict Validation
@@ -110,6 +111,8 @@ serve(async (req) => {
     if (token) {
         paymentBody.token = token;
         paymentBody.issuer_id = issuer_id;
+        const parsedInstallments = Number(installments);
+        paymentBody.installments = Number.isFinite(parsedInstallments) && parsedInstallments > 0 ? parsedInstallments : 1;
     }
 
     console.log('Creating Payment via MP API:', JSON.stringify(paymentBody));
