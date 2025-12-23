@@ -29,7 +29,7 @@ export function PhoneCaptureModal({ isOpen, onClose, onConfirm, loading }: Phone
     formState: { errors },
     setValue
   } = useForm<PhoneFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
   });
 
   const onSubmit = (data: PhoneFormData) => {
