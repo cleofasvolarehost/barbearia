@@ -168,12 +168,14 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 overflow-y-auto">
-        <div className="w-full max-w-md relative my-8">
-            <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl shadow-2xl relative flex flex-col w-full overflow-hidden min-h-[600px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505]/95 backdrop-blur-xl p-4 overflow-y-auto">
+        <div className="w-full max-w-lg relative my-8">
+            <div className="absolute -inset-10 bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.25),_transparent_55%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.22),_transparent_55%)] blur-2xl" />
+            <div className="bg-[#0B0B0F] border border-white/10 rounded-[32px] shadow-[0_0_60px_rgba(124,58,237,0.22)] relative flex flex-col w-full overflow-hidden min-h-[620px]">
+                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.18),_transparent_50%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.18),_transparent_45%)]" />
                 
                 {/* Header */}
-                <div className="px-6 pt-6 pb-4 relative z-10">
+                <div className="px-6 pt-7 pb-5 relative z-10">
                     <button 
                         onClick={onClose}
                         className="absolute top-6 right-6 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-all"
@@ -195,12 +197,13 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                     >
-                        <h1 className="text-3xl font-black mb-1 text-white">{pixData ? 'Pagamento via Pix' : 'Finalizar Assinatura'}</h1>
+                        <h1 className="text-3xl font-black mb-2 text-white">{pixData ? 'Pagamento via Pix' : 'Finalizar Assinatura'}</h1>
+                        <p className="text-sm text-gray-400">Revise seu plano e escolha a melhor forma de pagamento.</p>
                     </motion.div>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar pb-24">
+                <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 relative z-10">
                     
                     {/* Plan Summary Card */}
                     {!pixData && (
@@ -210,12 +213,13 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                         transition={{ delay: 0.1 }}
                         className="mx-6 mb-6"
                     >
-                        <div className="p-5 rounded-3xl bg-gradient-to-br from-white/10 to-white/[0.02] border border-white/20 backdrop-blur-xl">
-                            <div className="flex items-center gap-4">
+                        <div className="p-5 rounded-3xl bg-gradient-to-br from-white/10 via-white/[0.04] to-white/[0.02] border border-white/20 backdrop-blur-xl shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+                            <div className="flex items-center justify-between gap-4 mb-4">
                                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#10B981] flex items-center justify-center flex-shrink-0 shadow-[0_0_30px_rgba(124,58,237,0.4)]">
                                     <Crown className="w-7 h-7 text-white" />
                                 </div>
                                 <div className="flex-1">
+                                    <p className="text-xs uppercase tracking-[0.3em] text-[#10B981] font-semibold mb-1">Resumo do plano</p>
                                     <h3 className="font-black text-lg text-white mb-1">{plan.name}</h3>
                                     <p className="text-sm text-gray-400">Cobrado mensalmente</p>
                                 </div>
@@ -226,6 +230,10 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                     <p className="text-xs text-gray-500">/mês</p>
                                 </div>
                             </div>
+                            <div className="flex items-center justify-between text-sm text-gray-300 pt-4 border-t border-white/10">
+                                <span>Total hoje</span>
+                                <span className="font-bold text-white">R$ {Number(plan.price).toFixed(2)}</span>
+                            </div>
                         </div>
                     </motion.div>
                     )}
@@ -234,7 +242,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                     {pixData ? (
                         <div className="mx-6 space-y-6 animate-in fade-in zoom-in duration-300">
                              <div className="flex justify-center">
-                                <div className="bg-white p-4 rounded-xl shadow-lg shadow-[#7C3AED]/20">
+                                <div className="bg-white p-4 rounded-2xl shadow-lg shadow-[#7C3AED]/20">
                                     <img 
                                         src={`data:image/png;base64,${pixData.qr_code_base64}`} 
                                         alt="QR Code Pix" 
@@ -251,7 +259,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                     <textarea
                                         readOnly
                                         value={pixData.qr_code}
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-4 pr-12 text-xs text-gray-400 font-mono resize-none focus:border-[#7C3AED] outline-none h-24 transition-colors"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 pr-12 text-xs text-gray-300 font-mono resize-none focus:border-[#7C3AED] outline-none h-24 transition-colors"
                                     />
                                     <button
                                         onClick={handleCopyPix}
@@ -262,7 +270,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                     </button>
                                 </div>
                             </div>
-                             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+                             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 text-center">
                                 <p className="text-yellow-400 text-sm font-bold flex items-center justify-center gap-2">
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                     Aguardando pagamento...
@@ -310,7 +318,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                             {/* Payment Method Selection */}
                             <div className="px-6 flex-1">
                                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">
-                                    Escolha a forma de pagamento
+                                    Forma de pagamento
                                 </h3>
                                 <div className="space-y-3">
                                     {paymentMethodsList.map((method, index) => (
@@ -323,17 +331,18 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                             className={`
                                                 w-full min-h-[80px] p-5 rounded-2xl transition-all relative overflow-hidden group
                                                 ${selectedMethod === method.id 
-                                                    ? 'border-2 border-[#10B981] bg-white/10' 
+                                                    ? 'border-2 border-[#10B981] bg-white/10 shadow-[0_18px_30px_rgba(16,185,129,0.15)]' 
                                                     : 'border-2 border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
                                                 }
                                             `}
                                         >
+                                            <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r ${method.color}`} />
                                             <div className="flex items-center gap-4">
                                                 <div className={`
                                                     w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
                                                     ${selectedMethod === method.id 
                                                         ? 'bg-[#10B981] text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
-                                                        : 'bg-white/10 text-gray-400 group-hover:text-white'
+                                                        : 'bg-white/10 text-gray-200 group-hover:text-white'
                                                     }
                                                 `}>
                                                     {method.icon}
@@ -347,7 +356,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-sm text-gray-400">{method.subtitle}</p>
+                                                    <p className="text-sm text-gray-300">{method.subtitle}</p>
                                                 </div>
                                                 {selectedMethod === method.id && (
                                                     <div className="w-6 h-6 rounded-full bg-[#10B981] flex items-center justify-center">
