@@ -53,7 +53,7 @@ export function CreateAppointmentModal({ isOpen, onClose, onSuccess, barbershopI
       const [servicesRes, barbersRes, clientsRes] = await Promise.all([
         supabase.from('servicos').select('id, nome, duracao_minutos, preco').eq('ativo', true),
         supabase.from('barbeiros').select('id, nome').eq('ativo', true),
-        supabase.from('profiles').select('id, full_name, phone').limit(50) // Limit for performance
+        supabase.from('usuarios').select('id, nome, telefone').eq('tipo', 'cliente').limit(50)
       ]);
       
       if (servicesRes.data) setServices(servicesRes.data);
@@ -156,7 +156,7 @@ export function CreateAppointmentModal({ isOpen, onClose, onSuccess, barbershopI
               <select {...register('clientId', { required: clientType === 'registered' })} className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <option value="">Selecione um cliente...</option>
                 {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.full_name || c.email} ({c.phone})</option>
+                  <option key={c.id} value={c.id}>{c.nome} ({c.telefone || '-'})</option>
                 ))}
               </select>
             ) : (

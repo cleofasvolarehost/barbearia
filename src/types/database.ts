@@ -7,6 +7,7 @@ export type Barber = Database['public']['Tables']['barbeiros']['Row'] & {
     work_days?: number[];
     work_hours_start?: string;
     work_hours_end?: string;
+    establishment_id?: string | null;
     schedule_config?: {
         workHours: { start: string; end: string };
         lunchBreak: { start: string; end: string };
