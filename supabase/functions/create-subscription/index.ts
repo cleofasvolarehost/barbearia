@@ -13,13 +13,13 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      token, 
-      payer_email, 
-      establishment_id, 
-      plan_id, 
-      issuer_id, 
-      payment_method_id, 
+    const {
+      token,
+      payer_email,
+      establishment_id,
+      plan_id,
+      issuer_id,
+      payment_method_id,
       identification,
       card_holder_name,
       installments
@@ -28,6 +28,7 @@ serve(async (req) => {
     // 1. Strict Validation
     if (!plan_id) throw new Error('Missing plan_id');
     if (!establishment_id) throw new Error('Missing establishment_id');
+    if (!payer_email) throw new Error('Missing payer_email');
 
     // Initialize Supabase with Service Role Key (Bypass RLS)
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -67,9 +68,15 @@ serve(async (req) => {
     if (!mpAccessToken) {
         throw new Error('Server Config Error: Missing MP Access Token');
     }
+    if (mpAccessToken.toLowerCase().includes('public')) {
+        throw new Error('Server Config Error: MP access token appears to be a public key');
+    }
 
     // 4. Create Payment Body
     const transactionAmount = Number(plan.price);
+    if (!Number.isFinite(transactionAmount)) {
+        throw new Error('Invalid transaction amount');
+    }
     
     // Construct payer object
     const payer: any = {
@@ -78,7 +85,10 @@ serve(async (req) => {
 
     // Add identification if present (required for Pix)
     if (identification) {
-        payer.identification = identification;
+        payer.identification = {
+            ...identification,
+            number: identification.number ? String(identification.number).replace(/\D/g, '') : undefined
+        };
     }
 
     // Add name if present (from card holder or split from email/other source if needed)
@@ -93,10 +103,24 @@ serve(async (req) => {
         // Brick usually provides identification.
     }
 
+    const resolvedPaymentMethodId = payment_method_id || 'pix';
+
+    const { data: establishment, error: estError } = await supabase
+        .from('establishments')
+        .select('owner_id')
+        .eq('id', establishment_id)
+        .single();
+
+    if (estError) console.error('Error fetching establishment owner:', estError);
+
+    const userId = establishment?.owner_id;
+    const externalReference = userId ? `${userId}:${plan_id}` : `${establishment_id}:${plan_id}`;
+
     const paymentBody: any = {
         transaction_amount: transactionAmount,
-        description: `Assinatura ${plan.name}`,
-        payment_method_id: payment_method_id,
+        description: `Assinatura - ${plan.name}`,
+        payment_method_id: resolvedPaymentMethodId,
+        external_reference: externalReference,
         payer: payer,
         installments: installments || 1, // Default to 1 if missing
         metadata: {
@@ -138,16 +162,6 @@ serve(async (req) => {
     }
 
     // 5. Insert into Subscriptions Table
-    // We need to fetch the user_id from the establishment owner
-    const { data: establishment, error: estError } = await supabase
-        .from('establishments')
-        .select('owner_id')
-        .eq('id', establishment_id)
-        .single();
-
-    if (estError) console.error('Error fetching establishment owner:', estError);
-
-    const userId = establishment?.owner_id;
 
     // Check if subscription already exists (maybe update it?) or insert new.
     // Ideally we might want to upsert or check for pending ones. 
@@ -180,10 +194,17 @@ serve(async (req) => {
     const pointOfInteraction = data.point_of_interaction?.transaction_data;
     
     // STRICT CHECK FOR PIX
-    if (payment_method_id === 'pix') {
+    if (resolvedPaymentMethodId === 'pix') {
         if (!pointOfInteraction || !pointOfInteraction.qr_code || !pointOfInteraction.qr_code_base64) {
             console.error('CRITICAL: Mercado Pago did not return PIX data.', JSON.stringify(data));
-            throw new Error('Erro ao gerar QR Code PIX: Dados incompletos do Mercado Pago.');
+            return new Response(
+                JSON.stringify({
+                    error: 'PIX created but QR data missing',
+                    mp_response: data,
+                    sent_payload: paymentBody
+                }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+            )
         }
     }
     
@@ -195,9 +216,8 @@ serve(async (req) => {
             status: data.status,
             qr_code: pointOfInteraction?.qr_code,
             qr_code_base64: pointOfInteraction?.qr_code_base64,
-            ticket_url: pointOfInteraction?.ticket_url, 
-            subscription_id: subData?.id,
-            raw_mp_data: data // Send raw data for debugging frontend if needed
+            ticket_url: pointOfInteraction?.ticket_url,
+            expires_at: data.date_of_expiration
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
