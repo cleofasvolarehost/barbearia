@@ -45,6 +45,7 @@ export function MobileBottomNav({ onMenuClick }: MobileBottomNavProps) {
           return [
               { id: '/', icon: Home, label: 'Início' },
               { id: '/minhas-reservas', icon: CalendarClock, label: 'Histórico' },
+              { id: '/fidelidade', icon: Award, label: 'Fidelidade' },
               { id: '/perfil', icon: Users, label: 'Perfil' },
           ];
       }

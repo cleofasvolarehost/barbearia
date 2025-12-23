@@ -91,6 +91,20 @@ export default function Subscription() {
     ? new Date(establishment.subscription_end_date).toLocaleDateString()
     : '-';
 
+  const scrollToPlans = () => {
+    const plansSection = document.getElementById('plans-section');
+    if (plansSection) {
+      plansSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Flash effect or visual cue could be added here
+      const cards = document.querySelectorAll('.plan-card');
+      cards.forEach(card => {
+        card.classList.add('ring-2', 'ring-[#7C3AED]');
+        setTimeout(() => card.classList.remove('ring-2', 'ring-[#7C3AED]'), 1000);
+      });
+    }
+  };
+
   const getPeriodLabel = (days: number) => {
     if (days === 30) return 'mês';
     if (days === 90) return '3 meses';
@@ -164,14 +178,10 @@ export default function Subscription() {
                     {/* Actions */}
                     <div className="flex flex-col gap-3">
                         <button 
-                            onClick={() => {
-                                // Find current plan or default to first to show renewal options
-                                const currentPlan = plans.find(p => p.name === establishment?.subscription_plan) || plans[0];
-                                handleSelectPlan(currentPlan);
-                            }}
-                            className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold flex items-center justify-center gap-2 transition-colors"
+                            onClick={scrollToPlans}
+                            className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold flex items-center justify-center gap-2 transition-colors group"
                         >
-                            <CreditCard className="w-4 h-4" />
+                            <CreditCard className="w-4 h-4 group-hover:text-[#7C3AED] transition-colors" />
                             Renovar / Mudar Pagamento
                         </button>
                         
@@ -218,7 +228,7 @@ export default function Subscription() {
         )}
 
         {/* Plans Section Title */}
-        <div className="flex items-center justify-between mb-8 mt-16 border-t border-white/10 pt-16">
+        <div id="plans-section" className="flex items-center justify-between mb-8 mt-16 border-t border-white/10 pt-16">
             <div>
                 <h2 className="text-2xl font-bold text-white mb-2">Planos Disponíveis</h2>
                 <p className="text-gray-400 text-sm">Escolha o melhor ciclo para o seu negócio</p>
@@ -241,7 +251,7 @@ export default function Subscription() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className={`relative p-8 rounded-3xl border flex flex-col ${
+              className={`plan-card relative p-8 rounded-3xl border flex flex-col transition-all duration-300 ${
                 plan.is_recommended
                   ? 'bg-gradient-to-b from-[#7C3AED]/10 to-transparent border-[#7C3AED] shadow-2xl shadow-[#7C3AED]/20 scale-105 z-10'
                   : 'bg-white/5 backdrop-blur border-white/10 hover:bg-white/10'
@@ -280,17 +290,19 @@ export default function Subscription() {
 
               <button
                 onClick={() => handleSelectPlan(plan)}
-                disabled={isCurrentPlan && isActive}
+                // Allow clicking even if it's current plan, to renew or change payment method
                 className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
                   isCurrentPlan && isActive
-                    ? 'bg-green-500/20 text-green-500 cursor-default'
+                    ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30'
                     : plan.is_recommended
                         ? 'bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-lg hover:shadow-[#7C3AED]/50 text-white'
                         : 'bg-white/10 hover:bg-white/20 text-white'
                 }`}
               >
                 {isCurrentPlan && isActive ? (
-                    'Plano Atual'
+                    <>
+                        <CreditCard className="w-4 h-4" /> Renovar / Alterar Pagamento
+                    </>
                 ) : (
                     <>
                         {isActive ? 'Mudar para ' : 'Escolher '} {plan.name} <ArrowRight className="w-4 h-4" />
