@@ -132,7 +132,7 @@ function App() {
                 <Route path="/admin/branding" element={<AdminBranding />} />
                 <Route path="/admin/settings/branding" element={<Settings />} />
                 <Route path="/admin/subscription" element={<Subscription />} />
-                {/* <Route path="/admin/plans" element={<AdminPlans />} /> */}
+                <Route path="/admin/plans" element={<AdminPlans />} />
                 <Route path="/admin/marketing" element={<RescueCenter />} />
                 <Route path="/admin/whatsapp" element={<WhatsAppSettings />} />
                 <Route path="/admin/configuracoes" element={<Settings />} /> 
