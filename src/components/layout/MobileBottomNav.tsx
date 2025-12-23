@@ -151,7 +151,7 @@ export function getDrawerItems(role: string | null) {
             { id: '/admin/services', icon: Calendar, label: 'Serviços' },
             { id: '/admin/team', icon: Users, label: 'Equipe' }, // Also in bottom nav, but good to have here too? No, keep it distinct.
             { id: '/admin/plans', icon: Receipt, label: 'Planos VIP' },
-            { id: '/admin/settings/branding', icon: Palette, label: 'Personalizar' },
+            // Personalizar moved to Configurações
             { id: '/admin/subscription', icon: Crown, label: 'Assinatura' },
             { id: '/admin/pagamentos', icon: DollarSign, label: 'Recebimentos' },
             { id: '/admin/configuracoes', icon: Settings, label: 'Configurações' },

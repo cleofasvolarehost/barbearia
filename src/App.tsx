@@ -17,7 +17,6 @@ import Menu from "./pages/Menu";
 import Home from "./pages/Home";
 import LandingPage from "./pages/LandingPage"; // Import da Landing Page de Venda
 import BookSlug from "./pages/BookSlug";
-import Settings from "./pages/Settings"; // Import Settings Page
 import { RescueCenter } from "./components/RescueCenter";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import { LoyaltyCard } from "./components/LoyaltyCard";
@@ -133,7 +132,6 @@ function App() {
                 <Route path="/admin/services" element={<AdminServices />} />
                 <Route path="/admin/team" element={<AdminTeam />} />
                 <Route path="/admin/branding" element={<AdminBranding />} />
-                <Route path="/admin/settings/branding" element={<Settings />} />
                 <Route path="/admin/subscription" element={<Subscription />} />
                 <Route path="/admin/plans" element={<AdminPlans />} />
                 <Route path="/admin/marketing" element={<RescueCenter />} />
