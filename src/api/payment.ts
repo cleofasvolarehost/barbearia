@@ -25,11 +25,26 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
     const res = await apiFetch('/api/iugu/checkout/pix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ amount_cents: Math.round(params.appointment_data.price * 100), email: params.appointment_data.client_email || 'no-reply@example.com' }),
+      body: JSON.stringify({
+        amount_cents: Math.round(params.appointment_data.price * 100),
+        email: params.appointment_data.client_email || 'no-reply@example.com',
+        items: [
+          {
+            description: params.appointment_data.service_name || 'Assinatura',
+            quantity: 1,
+            price_cents: Math.round(params.appointment_data.price * 100),
+          },
+        ],
+      }),
     });
     const ct = res.headers.get('content-type') || '';
     const payload = ct.includes('application/json') ? await res.json() : { error: await res.text() };
-    if (!res.ok || (payload as any).error) throw new Error((payload as any).error || `Erro (${res.status}) ao gerar Pix`);
+    if (!res.ok || (payload as any).error) {
+      try {
+        console.error('Iugu Pix error details:', payload);
+      } catch {}
+      throw new Error((payload as any).error || (payload as any).mensagem || `Erro (${res.status}) ao gerar Pix`);
+    }
     const data = (payload as any).data || payload || {};
     const qrCode = data?.pix?.qrcode || data?.pix_qrcode || data?.qr_code || '';
     const qrBase64 = data?.pix?.qr_code_base64 || data?.qr_code_base64 || '';

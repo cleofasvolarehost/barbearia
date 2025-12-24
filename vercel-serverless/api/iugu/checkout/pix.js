@@ -62,7 +62,7 @@ module.exports = async (req, res) => {
     });
     const json = await r.json().catch(() => ({}));
     if (!r.ok) {
-      res.status(500).json({ success: false, mensagem: json?.errors || 'Erro' });
+      res.status(r.status).json({ success: false, mensagem: json?.errors || 'Erro', details: json });
       return;
     }
     res.status(200).json({ success: true, data: json });
@@ -70,4 +70,3 @@ module.exports = async (req, res) => {
     res.status(500).json({ success: false, mensagem: e.message });
   }
 };
-
