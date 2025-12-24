@@ -33,6 +33,7 @@ export default function FastCheckoutPage() {
   const [expandedMethod, setExpandedMethod] = useState<PaymentMethod>('pix');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [pixData, setPixData] = useState<{ qr_code: string; qr_code_base64: string; ticket_url?: string } | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -163,6 +164,37 @@ export default function FastCheckoutPage() {
         // But optimally the Edge Function handles the "Lead" creation on failure internally
     } finally {
         setIsProcessing(false);
+    }
+  };
+
+  const handleGeneratePix = async () => {
+    try {
+      setIsProcessing(true);
+      const { data, error } = await supabase.functions.invoke('create-subscription', {
+        body: {
+          payer_email: (user?.email || formData.email),
+          establishment_id: establishment?.id,
+          plan_id: plan?.id,
+          custom_amount: planPrice,
+          type: 'new_subscription',
+          description: `Assinatura ${plan?.name}`,
+          payment_method_id: 'pix'
+        }
+      });
+      if (error) throw error;
+      const qrCode = data?.qr_code || data?.point_of_interaction?.transaction_data?.qr_code;
+      const qrBase64 = data?.qr_code_base64 || data?.point_of_interaction?.transaction_data?.qr_code_base64;
+      const ticketUrl = data?.ticket_url || data?.point_of_interaction?.transaction_data?.ticket_url;
+      if (qrCode && qrBase64) {
+        setPixData({ qr_code: qrCode, qr_code_base64: qrBase64, ticket_url: ticketUrl });
+        toast.success('PIX gerado com sucesso!');
+      } else {
+        toast.error('Falha ao gerar QR Pix');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao gerar PIX');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -360,19 +392,41 @@ export default function FastCheckoutPage() {
           */}
           
           <div className="bg-[#1E1E1E] p-4 rounded-3xl border border-white/10">
-             <MercadoPagoBrick 
+            {selectedMethod === 'pix' ? (
+              <div className="space-y-4">
+                {!pixData ? (
+                  <button
+                    onClick={handleGeneratePix}
+                    disabled={isProcessing}
+                    className="w-full py-3 rounded-xl bg-[#10B981] text-black font-bold hover:opacity-90 disabled:opacity-50"
+                  >
+                    {isProcessing ? 'Gerando PIX...' : 'Gerar QR PIX'}
+                  </button>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="bg-white p-4 rounded-xl">
+                      <img src={`data:image/png;base64,${pixData.qr_code_base64}`} alt="QR Pix" className="w-48 h-48 mx-auto" />
+                    </div>
+                    <div className="text-center text-xs text-gray-500">Escaneie o QR Code ou copie o código</div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <MercadoPagoBrick
+                brickMode="cardPayment"
                 amount={planPrice}
                 email={formData.email}
-                paymentType={selectedMethod === 'pix' ? 'bank_transfer' : 'credit_card'}
+                paymentType={'credit_card'}
                 onSuccess={handleBrickSuccess}
                 onError={(err) => toast.error('Erro no pagamento')}
                 customization={{
-                    visual: {
-                        style: { theme: 'dark' },
-                        hidePaymentButton: false
-                    }
+                  visual: {
+                    style: { theme: 'dark' },
+                    hidePaymentButton: false
+                  }
                 }}
-            />
+              />
+            )}
           </div>
 
         </motion.div>

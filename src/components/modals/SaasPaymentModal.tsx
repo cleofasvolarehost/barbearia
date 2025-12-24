@@ -428,36 +428,87 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                 </div>
                                 
                                 <div className="bg-[#1E1E1E] rounded-b-2xl border-x border-b border-white/10 p-4 pt-0">
-                                    {selectedMethod && (
-                                    <MercadoPagoBrick 
-                                        key={selectedMethod} // FORCE RE-RENDER on method change
-                                        amount={Number(plan.price)} 
-                                        email={user?.email || ''}
-                                        paymentType={selectedMethod === 'pix' ? 'bank_transfer' : selectedMethod === 'credit' ? 'credit_card' : 'ticket'}
-                                        onSuccess={handleBrickSuccess}
-                                        onError={handleBrickError}
-                                        customization={{
-                                            paymentMethods: {
-                                                creditCard: selectedMethod === 'credit' ? 'all' : [],
-                                                debitCard: selectedMethod === 'credit' ? 'all' : [],
-                                                ticket: selectedMethod === 'boleto' ? 'all' : [],
-                                                bankTransfer: selectedMethod === 'pix' ? ['pix'] : [],
-                                                maxInstallments: 1
-                                            },
-                                            visual: {
-                                                style: {
-                                                    theme: 'dark',
-                                                    customVariables: {
-                                                        formPadding: '0px',
-                                                        baseColor: '#10B981',
-                                                        formBackgroundColor: '#1E1E1E',
-                                                        inputBackgroundColor: '#2A2A2A',
-                                                    }
+                                    {selectedMethod === 'pix' ? (
+                                        <div className="space-y-4">
+                                            {!pixData ? (
+                                                <button 
+                                                    onClick={async () => {
+                                                        try {
+                                                            setLoading(true);
+                                                            const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    'Content-Type': 'application/json',
+                                                                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+                                                                },
+                                                                body: JSON.stringify({
+                                                                    payer_email: user?.email,
+                                                                    establishment_id: establishment?.id,
+                                                                    plan_id: plan.id,
+                                                                    payment_method_id: 'pix',
+                                                                    description: `Assinatura ${plan.name}`
+                                                                })
+                                                            });
+                                                            const data = await response.json();
+                                                            const qrCode = data.qr_code || data.point_of_interaction?.transaction_data?.qr_code;
+                                                            const qrBase64 = data.qr_code_base64 || data.point_of_interaction?.transaction_data?.qr_code_base64;
+                                                            const ticketUrl = data.ticket_url || data.point_of_interaction?.transaction_data?.ticket_url;
+                                                            if (qrCode && qrBase64) {
+                                                                setPixData({ qr_code: qrCode, qr_code_base64: qrBase64, ticket_url: ticketUrl });
+                                                                toast.success('PIX gerado com sucesso!');
+                                                            } else {
+                                                                toast.error('Falha ao gerar QR Pix');
+                                                            }
+                                                        } catch (e: any) {
+                                                            toast.error(e.message || 'Erro ao gerar PIX');
+                                                        } finally {
+                                                            setLoading(false);
+                                                        }
+                                                    }}
+                                                    className="w-full py-3 rounded-xl bg-[#10B981] text-black font-bold hover:opacity-90"
+                                                >
+                                                    Gerar QR PIX
+                                                </button>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    <div className="bg-white p-4 rounded-xl">
+                                                        <img src={`data:image/png;base64,${pixData.qr_code_base64}`} alt="QR Pix" className="w-48 h-48 mx-auto" />
+                                                    </div>
+                                                    <div className="text-center text-xs text-gray-500">Escaneie o QR Code ou copie o código</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <MercadoPagoBrick 
+                                            key={selectedMethod || 'credit'} 
+                                            brickMode={selectedMethod === 'boleto' ? 'payment' : 'cardPayment'}
+                                            amount={Number(plan.price)} 
+                                            email={user?.email || ''}
+                                            paymentType={selectedMethod === 'credit' ? 'credit_card' : selectedMethod === 'boleto' ? 'ticket' : 'credit_card'}
+                                            onSuccess={handleBrickSuccess}
+                                            onError={handleBrickError}
+                                            customization={{
+                                                paymentMethods: {
+                                                    creditCard: selectedMethod === 'credit' ? 'all' : [],
+                                                    debitCard: selectedMethod === 'credit' ? 'all' : [],
+                                                    ticket: selectedMethod === 'boleto' ? 'all' : [],
+                                                    bankTransfer: [],
+                                                    maxInstallments: 1
                                                 },
-                                                hidePaymentButton: false 
-                                            }
-                                        }}
-                                    />
+                                                visual: {
+                                                    style: {
+                                                        theme: 'dark',
+                                                        customVariables: {
+                                                            formPadding: '0px',
+                                                            baseColor: '#10B981',
+                                                            formBackgroundColor: '#1E1E1E',
+                                                            inputBackgroundColor: '#2A2A2A',
+                                                        }
+                                                    },
+                                                    hidePaymentButton: false 
+                                                }
+                                            }}
+                                        />
                                     )}
                                 </div>
                             </div>
