@@ -5,15 +5,12 @@ import { useEstablishment } from '../contexts/EstablishmentContext';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
-import { Tab } from '../components/modals/SubscriptionManagerModal';
-import { SubscriptionController } from '../components/subscription/SubscriptionController';
+import { useNavigate } from 'react-router-dom';
 
 export default function Subscription() {
   const { establishment, refreshEstablishment } = useEstablishment();
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const [plans, setPlans] = useState<any[]>([]);
-  const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const [managerTab, setManagerTab] = useState<Tab>('plans');
   const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
@@ -43,8 +40,8 @@ export default function Subscription() {
   };
 
   const handleSelectPlan = (plan: any) => {
-    setManagerTab('plans');
-    setIsManagerOpen(true);
+    // Redirect to the centralized Management Hub
+    navigate('/dashboard/subscription');
   };
 
   const handlePaymentSuccess = async () => {
@@ -116,14 +113,6 @@ export default function Subscription() {
 
   return (
     <div className="min-h-screen bg-[#121212] text-white p-4 md:p-8 pb-32">
-      <SubscriptionController 
-        isOpen={isManagerOpen}
-        onClose={() => setIsManagerOpen(false)}
-        plans={plans}
-        onSuccess={handlePaymentSuccess}
-        initialTab={managerTab}
-      />
-
       <div className="max-w-6xl mx-auto">
 
         {/* Header */}
@@ -180,7 +169,7 @@ export default function Subscription() {
                     {/* Actions */}
                     <div className="flex flex-col gap-3">
                         <button 
-                            onClick={() => { setManagerTab('renew'); setIsManagerOpen(true); }}
+                            onClick={() => navigate('/dashboard/subscription')}
                             className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold flex items-center justify-center gap-2 transition-colors group"
                         >
                             <CreditCard className="w-4 h-4 group-hover:text-[#7C3AED] transition-colors" />
