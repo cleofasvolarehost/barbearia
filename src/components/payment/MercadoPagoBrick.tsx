@@ -146,7 +146,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
                 },
                 visual: {
                     style: {
-                        theme: 'dark' // Matches our dark UI
+                        theme: 'default' // Changed from 'dark' to 'default' to fix 404/400 errors
                     }
                 }
             },

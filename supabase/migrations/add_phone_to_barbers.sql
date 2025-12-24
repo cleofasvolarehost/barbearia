@@ -1,1 +1,0 @@
-ALTER TABLE barbeiros ADD COLUMN telefone VARCHAR(20);
