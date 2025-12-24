@@ -32,7 +32,51 @@ serve(async (req) => {
 
     // 1. Strict Validation
     if (!plan_id) throw new Error('Missing plan_id');
-    if (!establishment_id) throw new Error('Missing establishment_id');
+    // Resolve establishment when not provided (logged-in user without shop yet)
+    let resolvedEstablishmentId = establishment_id;
+    if (!resolvedEstablishmentId && payer_email) {
+        const { data: userRow } = await supabase
+            .from('usuarios')
+            .select('id, nome')
+            .eq('email', payer_email)
+            .maybeSingle();
+
+        const userId = userRow?.id;
+        if (userId) {
+            const { data: estRow } = await supabase
+                .from('establishments')
+                .select('id')
+                .eq('owner_id', userId)
+                .maybeSingle();
+            if (estRow?.id) {
+                resolvedEstablishmentId = estRow.id;
+            } else {
+                // create minimal establishment to attach subscription later
+                const slugBase = (userRow?.nome || 'shop').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                const tempSlug = `${slugBase}-${String(userId).substring(0,6)}`;
+                const { data: newEst, error: estCreateError } = await supabase
+                    .from('establishments')
+                    .insert({
+                        owner_id: userId,
+                        name: userRow?.nome ? `${userRow.nome}'s Shop` : 'Minha Barbearia',
+                        slug: tempSlug,
+                        open_hour: '09:00',
+                        close_hour: '18:00',
+                        work_days: [1,2,3,4,5,6],
+                        primary_color: '#000000',
+                        secondary_color: '#ffffff'
+                    })
+                    .select('id')
+                    .single();
+                if (!estCreateError && newEst?.id) {
+                    resolvedEstablishmentId = newEst.id;
+                }
+            }
+        }
+    }
+    if (!resolvedEstablishmentId) {
+        throw new Error('Missing establishment_id');
+    }
 
     // Initialize Supabase with Service Role Key (Bypass RLS)
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -61,7 +105,7 @@ serve(async (req) => {
     const { data: estCreds } = await supabase
         .from('establishments')
         .select('mp_access_token')
-        .eq('id', establishment_id)
+        .eq('id', resolvedEstablishmentId)
         .maybeSingle();
 
     if (estCreds?.mp_access_token && estCreds.mp_access_token.length > 20) {
@@ -118,8 +162,8 @@ serve(async (req) => {
             plan_id: plan_id,
             plan_name: plan.name
         },
-        notification_url: `${supabaseUrl}/functions/v1/mp-webhook`
-    };
+            notification_url: `${supabaseUrl}/functions/v1/mp-webhook`
+        };
 
     // If Card (has token)
     if (token) {
@@ -186,7 +230,7 @@ serve(async (req) => {
     const { data: establishment, error: estError } = await supabase
         .from('establishments')
         .select('owner_id, subscription_end_date')
-        .eq('id', establishment_id)
+        .eq('id', resolvedEstablishmentId)
         .single();
 
     if (estError) console.error('Error fetching establishment owner:', estError);
@@ -223,11 +267,11 @@ serve(async (req) => {
                 subscription_plan: plan.name,
                 subscription_end_date: newEndDate.toISOString()
             })
-            .eq('id', establishment_id);
+            .eq('id', resolvedEstablishmentId);
 
         // 3. Log Payment or Preapproval
         await supabase.from('saas_payments').insert({
-            establishment_id,
+            establishment_id: resolvedEstablishmentId,
             amount: transactionAmount,
             status: 'paid',
             payment_method: payment_method_id,
