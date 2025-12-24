@@ -438,32 +438,34 @@ export default function FastCheckoutPage() {
                 )}
               </div>
             ) : (
-              <MercadoPagoBrick
-                brickMode="cardPayment"
-                amount={planPrice}
-                email={formData.email}
-                paymentType={'credit_card'}
-                onSuccess={handleBrickSuccess}
-                onError={(err) => toast.error('Erro no pagamento')}
-                customization={{
-                  visual: {
-                    style: { theme: 'dark' },
-                    hidePaymentButton: false
-                  }
-                }}
-              />
-              <div className="mt-4 flex items-center gap-3">
-                <input 
-                  id="recurringToggle"
-                  type="checkbox" 
-                  checked={recurring} 
-                  onChange={(e) => setRecurring(e.target.checked)} 
-                  className="w-5 h-5 rounded-md border border-white/20 bg-white/5"
+              <>
+                <MercadoPagoBrick
+                  brickMode="cardPayment"
+                  amount={planPrice}
+                  email={formData.email}
+                  paymentType={'credit_card'}
+                  onSuccess={handleBrickSuccess}
+                  onError={(err) => toast.error('Erro no pagamento')}
+                  customization={{
+                    visual: {
+                      style: { theme: 'dark' },
+                      hidePaymentButton: false
+                    }
+                  }}
                 />
-                <label htmlFor="recurringToggle" className="text-sm text-gray-300">
-                  Cobrança automática mensal no cartão
-                </label>
-              </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <input 
+                    id="recurringToggle"
+                    type="checkbox" 
+                    checked={recurring} 
+                    onChange={(e) => setRecurring(e.target.checked)} 
+                    className="w-5 h-5 rounded-md border border-white/20 bg-white/5"
+                  />
+                  <label htmlFor="recurringToggle" className="text-sm text-gray-300">
+                    Cobrança automática mensal no cartão
+                  </label>
+                </div>
+              </>
             )}
           </div>
 
