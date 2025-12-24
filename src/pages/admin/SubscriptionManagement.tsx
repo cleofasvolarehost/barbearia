@@ -18,10 +18,10 @@ export default function SubscriptionManagementPage() {
   // Redirect if no active subscription (User should go to Landing Page to pick a plan)
    useEffect(() => {
      if (!establishmentLoading && (!establishment || establishment.subscription_status !== 'active')) {
-         // Redirect to Landing Page (#pricing) so they can pick a plan and go to Fast Checkout
-         // Using window.location to ensure full reload/hash navigation if needed, or navigate('/')
-         navigate('/'); 
-     }
+          // Redirect to Landing Page (#pricing) so they can pick a plan and go to Fast Checkout
+          // Using window.location.href to ensure anchor scrolling works reliably
+          window.location.href = '/#pricing'; 
+      }
    }, [establishment, establishmentLoading, navigate]);
   const [activeTab, setActiveTab] = useState<'plans' | 'renew' | 'payment'>('plans');
   
