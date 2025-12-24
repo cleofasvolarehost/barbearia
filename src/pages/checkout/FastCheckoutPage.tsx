@@ -14,6 +14,14 @@ export default function FastCheckoutPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Guard: Redirect logged-in users to management hub
+  useEffect(() => {
+    if (user) {
+        // Prevent duplicate subscriptions or confusion
+        navigate('/dashboard/subscription', { replace: true });
+    }
+  }, [user, navigate]);
+  
   const planId = searchParams.get('plan');
   
   const [loadingPlan, setLoadingPlan] = useState(true);
@@ -113,11 +121,12 @@ export default function FastCheckoutPage() {
         setShowSuccess(true);
         setTimeout(() => {
             if (data?.temp_password) {
-                // Auto-login logic could go here if token returned
+                // New user flow
                 toast.success(`Conta criada! Senha temporária enviada para o email.`);
-                navigate('/login');
+                navigate('/setup/welcome'); // Redirect to welcome/setup page
             } else {
-                navigate('/admin/dashboard');
+                // Fallback (should be caught by Guard above if logged in, but for safety)
+                navigate('/setup/welcome');
             }
         }, 3000);
 

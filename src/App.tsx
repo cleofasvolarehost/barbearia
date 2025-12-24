@@ -40,6 +40,8 @@ import SuperAdminSystem from "./pages/super-admin/System";
 import SuperAdminUsers from "./pages/super-admin/Users";
 import Subscription from "./pages/Subscription";
 import FastCheckoutPage from "./pages/checkout/FastCheckoutPage";
+import SubscriptionManagementPage from "./pages/admin/SubscriptionManagement"; // Import new page
+import SetupWelcome from "./pages/SetupWelcome"; // Import welcome page
 import { useAuth } from "./hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
@@ -87,7 +89,11 @@ function App() {
             <Routes>
               {/* Rota Raiz: Landing Page de Venda do SaaS (CyberSalon) */}
               <Route path="/" element={<LandingPage />} />
+              
+              {/* ROUTE A: ACQUISITION TUNNEL (New Customers) */}
+              {/* Guest Only - Managed inside component logic */}
               <Route path="/checkout/start" element={<FastCheckoutPage />} />
+              <Route path="/setup/welcome" element={<SetupWelcome />} />
 
               {/* Rotas de Autenticação */}
               <Route path="/login" element={<Login />} />
@@ -130,6 +136,12 @@ function App() {
                 <Route path="/admin/dashboard" element={<GodModeDashboard />} />
                 <Route path="/admin/appointments" element={<AdminAppointmentsPage />} />
                 <Route path="/clientes" element={<Clients />} />
+              </Route>
+
+              {/* ROUTE B: MANAGEMENT HUB (Active Customers) */}
+              {/* Requires Login (Owner) */}
+              <Route element={<ProtectedRoute allowedRoles={['owner']} />}>
+                 <Route path="/dashboard/subscription" element={<SubscriptionManagementPage />} />
               </Route>
 
               {/* Owner Only Routes (Restricted) */}
