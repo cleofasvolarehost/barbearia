@@ -36,7 +36,17 @@ export default function FastCheckoutPage() {
   const [pixData, setPixData] = useState<{ qr_code: string; qr_code_base64: string; ticket_url?: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [recurring, setRecurring] = useState(true);
-  
+
+  // Preload Mercado Pago SDK early to speed up card form
+  useEffect(() => {
+    if (document.getElementById('mp-sdk')) return;
+    const script = document.createElement('script');
+    script.id = 'mp-sdk';
+    script.src = 'https://sdk.mercadopago.com/js/v2';
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',

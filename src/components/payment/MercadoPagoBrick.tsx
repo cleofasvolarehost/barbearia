@@ -46,6 +46,7 @@ interface MercadoPagoBrickProps {
 export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paymentType = 'credit_card', brickMode = 'cardPayment', onSuccess, onError, customization }: MercadoPagoBrickProps) {
   const brickInitialized = useRef(false);
   const [initError, setInitError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Prevent double init
@@ -66,8 +67,14 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
     document.body.appendChild(script);
 
     return () => {
-      // Typically we don't remove the SDK as other components might use it
-      // but we mark initialized as false if we unmount? No, SDK stays.
+      try {
+        // Unmount brick to avoid duplicates when switching tabs
+        // @ts-ignore
+        if ((window as any).paymentBrickController?.unmount) {
+          // @ts-ignore
+          (window as any).paymentBrickController.unmount();
+        }
+      } catch {}
     };
   }, []);
 
@@ -158,6 +165,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
             callbacks: {
                 onReady: () => {
                     console.log('Brick Ready');
+                    setLoading(false);
                 },
                 onSubmit: ({ selectedPaymentMethod, formData }: any) => {
                     // Extract data needed for subscription
@@ -193,7 +201,8 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
             },
         };
 
-        await bricksBuilder.create(brickMode, 'paymentBrick_container', settings);
+        // @ts-ignore
+        (window as any).paymentBrickController = await bricksBuilder.create(brickMode, 'paymentBrick_container', settings);
     } catch (err) {
         console.error('Brick Init Error:', err);
         setInitError('Erro ao inicializar pagamento.');
@@ -212,6 +221,17 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
 
   return (
     <div className="w-full max-w-md mx-auto">
+        {loading && (
+          <div className="mb-4 p-4 rounded-2xl bg-white/5 border border-white/10 animate-pulse">
+            <div className="h-4 bg-white/10 rounded mb-3"></div>
+            <div className="h-10 bg-white/10 rounded mb-3"></div>
+            <div className="flex gap-3">
+              <div className="h-10 flex-1 bg-white/10 rounded"></div>
+              <div className="h-10 flex-1 bg-white/10 rounded"></div>
+            </div>
+            <div className="h-10 bg-white/10 rounded mt-3"></div>
+          </div>
+        )}
         <div id="paymentBrick_container"></div>
     </div>
   );
