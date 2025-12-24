@@ -5,7 +5,9 @@ class IuguAdminController {
   static async registerTriggers(req, res) {
     try {
       const { baseUrl } = req.body; // e.g. https://api.seuservidor.com
-      if (!baseUrl) return res.status(400).json({ error: 'baseUrl obrigatório' });
+      const { WEBHOOK_BASE_URL, BACKEND_BASE_URL } = require('../config/env');
+      const effectiveBase = baseUrl || WEBHOOK_BASE_URL || BACKEND_BASE_URL;
+      if (!effectiveBase) return res.status(400).json({ error: 'baseUrl obrigatório' });
 
       const events = [
         'invoice.payment_failed',
@@ -16,7 +18,7 @@ class IuguAdminController {
 
       const results = [];
       for (const ev of events) {
-        const url = `${baseUrl}/api/webhooks/iugu`;
+        const url = `${effectiveBase.replace(/\/$/, '')}/api/webhooks/iugu`;
         const r = await iugu.createTrigger(ev, url);
         results.push({ event: ev, result: r });
       }
@@ -29,4 +31,3 @@ class IuguAdminController {
 }
 
 module.exports = IuguAdminController;
-
