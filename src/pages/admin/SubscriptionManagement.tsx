@@ -21,6 +21,7 @@ export default function SubscriptionManagementPage() {
   const [paymentDescription, setPaymentDescription] = useState('');
   const [paymentType, setPaymentType] = useState<'upgrade' | 'renewal' | 'new_subscription'>('renewal');
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<'plans' | 'renew' | 'payment'>('plans');
 
   useEffect(() => {
     fetchPlans();
