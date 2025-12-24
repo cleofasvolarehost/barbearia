@@ -363,7 +363,7 @@ export default function FastCheckoutPage() {
              <MercadoPagoBrick 
                 amount={planPrice}
                 email={formData.email}
-                paymentType={selectedMethod === 'pix' ? 'pix' : 'credit_card'}
+                paymentType={selectedMethod === 'pix' ? 'bank_transfer' : 'credit_card'}
                 onSuccess={handleBrickSuccess}
                 onError={(err) => toast.error('Erro no pagamento')}
                 customization={{
