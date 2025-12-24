@@ -1,4 +1,3 @@
-const fetch = require('node-fetch');
 const { IUGU_API_TOKEN } = require('../config/env');
 
 function getAuthHeader() {
