@@ -36,7 +36,31 @@ serve(async (req) => {
     } = await req.json()
 
     // 1. Strict Validation
-    if (!plan_id) throw new Error('Missing plan_id');
+    const validationErrors: string[] = [];
+    if (!supabaseUrl || !supabaseServiceKey) {
+        validationErrors.push('Server config missing Supabase credentials');
+    }
+    if (!plan_id) validationErrors.push('Missing plan_id');
+    if (!payer_email) validationErrors.push('Missing payer_email');
+    if (!payment_method_id) validationErrors.push('Missing payment_method_id');
+    if (!establishment_id && !payer_email) {
+        validationErrors.push('Missing establishment_id or payer_email');
+    }
+    if (custom_amount !== undefined && Number(custom_amount) <= 0) {
+        validationErrors.push('custom_amount must be greater than zero');
+    }
+    const isPix = payment_method_id === 'pix';
+    if (!isPix) {
+        if (!token) validationErrors.push('Missing token for card payment');
+        if (!issuer_id) validationErrors.push('Missing issuer_id for card payment');
+        if (!card_holder_name) validationErrors.push('Missing card_holder_name for card payment');
+    } else if (!identification) {
+        validationErrors.push('Missing identification for Pix payment');
+    }
+    if (validationErrors.length > 0) {
+        throw new Error(`Validation failed: ${validationErrors.join(', ')}`);
+    }
+
     // Resolve establishment when not provided (logged-in user without shop yet)
     let resolvedEstablishmentId = establishment_id;
     if (!resolvedEstablishmentId && payer_email) {
