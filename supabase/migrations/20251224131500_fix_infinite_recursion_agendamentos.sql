@@ -164,3 +164,40 @@ FOR ALL USING (owner_id = auth.uid());
 -- Super Admin manages all establishments
 CREATE POLICY "Super Admin manages establishments" ON public.establishments
 FOR ALL USING (public.is_super_admin());
+
+-- 7. Fix Agendamentos_Servicos Policies to avoid recursion
+ALTER TABLE public.agendamentos_servicos ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies
+DROP POLICY IF EXISTS "Enable read access for involved parties" ON public.agendamentos_servicos;
+DROP POLICY IF EXISTS "Enable insert for clients" ON public.agendamentos_servicos;
+
+-- Create a helper function to check if user can access an appointment
+CREATE OR REPLACE FUNCTION public.can_access_appointment(appointment_id UUID)
+RETURNS boolean AS $$
+DECLARE
+  _can_access boolean;
+BEGIN
+  -- SECURITY DEFINER bypasses RLS on agendamentos
+  SELECT EXISTS (
+    SELECT 1 FROM public.agendamentos a
+    WHERE a.id = appointment_id
+    AND (
+      a.usuario_id = auth.uid() -- Client
+      OR a.barbeiro_id = auth.uid() -- Barber
+      OR public.owns_establishment(a.establishment_id) -- Owner
+      OR public.is_super_admin() -- Super Admin
+    )
+  ) INTO _can_access;
+  
+  RETURN COALESCE(_can_access, false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+GRANT EXECUTE ON FUNCTION public.can_access_appointment(UUID) TO authenticated;
+
+-- Simple policy using the secure function
+CREATE POLICY "Users can access appointment services" ON public.agendamentos_servicos
+FOR ALL USING (
+  public.can_access_appointment(agendamento_id)
+);
