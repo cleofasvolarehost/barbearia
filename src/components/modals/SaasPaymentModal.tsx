@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { MercadoPagoBrick } from '../payment/MercadoPagoBrick';
+import { supabase } from '../../lib/supabase';
+import { apiFetch } from '../../lib/api';
+import { createCardToken } from '../../lib/iugu';
 import { X, Copy, Check, Loader2, CreditCard, Barcode, Crown, ShieldCheck, Lock, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
@@ -172,6 +174,32 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
       console.error('Brick Error:', error);
       const msg = typeof error === 'string' ? error : 'Erro no processamento. Tente novamente.';
       toast.error(msg);
+  };
+
+  const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
+  const handleCardPay = async () => {
+    setLoading(true);
+    try {
+      const fullName = cardData.name.trim();
+      const [first_name, ...rest] = fullName.split(' ');
+      const last_name = rest.join(' ') || first_name;
+      const token = await createCardToken({ number: cardData.number.replace(/\s+/g, ''), verification_value: cardData.cvv, first_name, last_name, month: cardData.month, year: cardData.year });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const bearer = sessionData.session?.access_token;
+      const res = await apiFetch('/api/iugu/checkout/card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) },
+        body: JSON.stringify({ payment_token: token.id, amount_cents: Math.round(Number(plan.price) * 100), email: user?.email || 'no-reply@example.com', items: [{ description: `Assinatura ${plan.name}`, quantity: 1, price_cents: Math.round(Number(plan.price) * 100) }] })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setShowSuccess(true);
+      toast.success('Assinatura iniciada com sucesso!');
+      setTimeout(async () => { await onSuccess(); onClose(); }, 3000);
+    } catch (error: any) {
+      toast.error(`Erro: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const paymentMethodsList = [
@@ -474,36 +502,17 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                             )}
                                         </div>
                                     ) : (
-                                        <MercadoPagoBrick 
-                                            key={selectedMethod || 'credit'} 
-                                            brickMode={selectedMethod === 'boleto' ? 'payment' : 'cardPayment'}
-                                            amount={Number(plan.price)} 
-                                            email={user?.email || ''}
-                                            paymentType={selectedMethod === 'credit' ? 'credit_card' : selectedMethod === 'boleto' ? 'ticket' : 'credit_card'}
-                                            onSuccess={handleBrickSuccess}
-                                            onError={handleBrickError}
-                                            customization={{
-                                                paymentMethods: {
-                                                    creditCard: selectedMethod === 'credit' ? 'all' : [],
-                                                    debitCard: selectedMethod === 'credit' ? 'all' : [],
-                                                    ticket: selectedMethod === 'boleto' ? 'all' : [],
-                                                    bankTransfer: [],
-                                                    maxInstallments: 1
-                                                },
-                                                visual: {
-                                                    style: {
-                                                        theme: 'dark',
-                                                        customVariables: {
-                                                            formPadding: '0px',
-                                                            baseColor: '#10B981',
-                                                            formBackgroundColor: '#1E1E1E',
-                                                            inputBackgroundColor: '#2A2A2A',
-                                                        }
-                                                    },
-                                                    hidePaymentButton: false 
-                                                }
-                                            }}
-                                        />
+                                        <div className="space-y-3">
+                                          <input value={user?.email || ''} readOnly className="w-full px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+                                          <input onChange={e=>setCardData({...cardData, number: e.target.value})} placeholder="Número do cartão" className="w-full px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+                                          <input onChange={e=>setCardData({...cardData, name: e.target.value})} placeholder="Nome impresso" className="w-full px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+                                          <div className="grid grid-cols-3 gap-2">
+                                            <input onChange={e=>setCardData({...cardData, month: e.target.value})} placeholder="MM" className="px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+                                            <input onChange={e=>setCardData({...cardData, year: e.target.value})} placeholder="AA" className="px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+                                            <input onChange={e=>setCardData({...cardData, cvv: e.target.value})} placeholder="CVV" className="px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+                                          </div>
+                                          <button onClick={handleCardPay} disabled={loading} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-white font-bold">{loading ? 'Processando...' : 'Pagar com Cartão'}</button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
