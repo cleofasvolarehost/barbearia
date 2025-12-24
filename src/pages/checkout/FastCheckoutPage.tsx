@@ -4,7 +4,7 @@ import { Lock, ShieldCheck, CreditCard, User, Mail, Phone, ChevronDown, ChevronU
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { MercadoPagoBrick } from '../../components/payment/MercadoPagoBrick';
+import { createCardToken } from '../../lib/iugu';
 import { toast } from 'react-hot-toast';
 
 type PaymentMethod = 'pix' | 'credit';
@@ -35,6 +35,8 @@ export default function FastCheckoutPage() {
   const [pixData, setPixData] = useState<{ qr_code: string; qr_code_base64: string; ticket_url?: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [recurring, setRecurring] = useState(true);
+  const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
+  const [cardError, setCardError] = useState<string | null>(null);
 
   // Preload Mercado Pago SDK early to speed up card form
   useEffect(() => {
@@ -106,105 +108,64 @@ export default function FastCheckoutPage() {
     setExpandedMethod(method);
   };
 
-  const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
-    if (selectedMethod === 'credit' && planPrice < 5) {
-      toast.error('Valor mínimo para cartão é R$ 5,00');
-      return;
-    }
+  const handleCardPay = async () => {
+    if (selectedMethod !== 'credit') return;
+    if (planPrice < 5) { toast.error('Valor mínimo para cartão é R$ 5,00'); return; }
     setIsProcessing(true);
+    setCardError(null);
     try {
-        let response;
-        
-        if (user) {
-            // Existing User Flow (Create Subscription / Reactivate)
-            response = await supabase.functions.invoke('create-subscription', {
-                body: {
-                    token,
-                    issuer_id,
-                    payment_method_id,
-                    card_holder_name,
-                    identification,
-                    payer_email: user.email,
-                    establishment_id: establishment?.id, // Might be null if user has account but no establishment yet
-                    plan_id: plan?.id,
-                    custom_amount: planPrice,
-                    type: 'new_subscription',
-                    description: `Assinatura ${plan?.name}`,
-                    recurring: selectedMethod === 'credit' ? recurring : false
-                }
-            });
-        } else {
-            // New Guest Flow (Acquire Customer)
-            response = await supabase.functions.invoke('acquire-customer', {
-                body: {
-                    token,
-                    issuer_id,
-                    payment_method_id,
-                    card_holder_name,
-                    identification,
-                    payer_email: formData.email,
-                    plan_id: plan?.id,
-                    user_data: {
-                        name: formData.name,
-                        email: formData.email,
-                        phone: formData.phone,
-                        password: formData.password
-                    },
-                    type: 'new_subscription_fast_track',
-                    recurring: selectedMethod === 'credit' ? recurring : false
-                }
-            });
-        }
-
-        const { data, error } = response;
-
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-
-        // 3. Success Flow
-        setShowSuccess(true);
-        try {
-          await refreshEstablishment();
-        } catch {}
-        setTimeout(() => {
-          if (user) {
-            navigate('/admin/dashboard', { replace: true });
-          } else {
-            navigate('/setup/welcome', { replace: true });
-          }
-        }, 1500);
-
-    } catch (error: any) {
-        console.error('Checkout Error:', error);
-        const extra = error?.context?.body ? ` — ${error.context.body}` : '';
-        toast.error((error.message || 'Erro ao processar pagamento') + extra);
-        
-        // Save Lead logic could be here if we want to separate it from the atomic function
-        // But optimally the Edge Function handles the "Lead" creation on failure internally
+      const fullName = cardData.name.trim();
+      const [first_name, ...rest] = fullName.split(' ');
+      const last_name = rest.join(' ') || first_name;
+      const paymentToken = await createCardToken({
+        number: cardData.number.replace(/\s+/g, ''),
+        verification_value: cardData.cvv,
+        first_name,
+        last_name,
+        month: cardData.month,
+        year: cardData.year,
+      });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const bearer = sessionData.session?.access_token;
+      const res = await (await import('../../lib/api')).apiFetch('/api/iugu/checkout/card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) },
+        body: JSON.stringify({ payment_token: paymentToken.id, amount_cents: Math.round(planPrice * 100), email: (user?.email || formData.email) || 'no-reply@example.com', items: [{ description: `Assinatura ${plan?.name}`, quantity: 1, price_cents: Math.round(planPrice * 100) }] })
+      });
+      const ct = res.headers.get('content-type') || '';
+      const payload = ct.includes('application/json') ? await res.json() : { mensagem: await res.text() };
+      if (!res.ok || !(payload as any).success) throw new Error((payload as any).mensagem || `Erro (${res.status})`);
+      setShowSuccess(true);
+      try { await refreshEstablishment(); } catch {}
+      setTimeout(() => { navigate('/admin/dashboard', { replace: true }); }, 1500);
+    } catch (e: any) {
+      setCardError(e.message || 'Falha no pagamento');
+      toast.error(e.message || 'Erro no pagamento');
     } finally {
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
   };
 
   const handleGeneratePix = async () => {
     try {
       setIsProcessing(true);
-      const { data, error } = await supabase.functions.invoke('create-subscription', {
-        body: {
-          payer_email: (user?.email || formData.email),
-          establishment_id: establishment?.id,
-          plan_id: plan?.id,
-          custom_amount: planPrice,
-          type: 'new_subscription',
-          description: `Assinatura ${plan?.name}`,
-          payment_method_id: 'pix'
-        }
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const res = await (await import('../../lib/api')).apiFetch('/api/iugu/checkout/pix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          email: (user?.email || formData.email) || 'no-reply@example.com',
+          amount_cents: Math.round(planPrice * 100),
+          items: [{ description: `Assinatura ${plan?.name}`, quantity: 1, price_cents: Math.round(planPrice * 100) }]
+        })
       });
-      if (error) throw error;
-      const qrCode = data?.qr_code || data?.point_of_interaction?.transaction_data?.qr_code;
-      const qrBase64 = data?.qr_code_base64 || data?.point_of_interaction?.transaction_data?.qr_code_base64;
-      const ticketUrl = data?.ticket_url || data?.point_of_interaction?.transaction_data?.ticket_url;
-      if (qrCode && qrBase64) {
+      const ct = res.headers.get('content-type') || '';
+      const payload = ct.includes('application/json') ? await res.json() : { mensagem: await res.text() };
+      const qrCode = (payload as any)?.data?.pix_qrcode || (payload as any)?.data?.pix?.qrcode;
+      const qrBase64 = (payload as any)?.data?.pix?.qr_code_base64 || '';
+      const ticketUrl = (payload as any)?.data?.ticket_url || '';
+      if (qrCode && (qrBase64 || typeof qrBase64 === 'string')) {
         setPixData({ qr_code: qrCode, qr_code_base64: qrBase64, ticket_url: ticketUrl });
         toast.success('PIX gerado com sucesso!');
       } else {
@@ -520,23 +481,20 @@ export default function FastCheckoutPage() {
               </div>
             ) : (
               <>
-                <MercadoPagoBrick
-                  brickMode="cardPayment"
-                  amount={planPrice}
-                  email={formData.email}
-                  paymentType={'credit_card'}
-                  onSuccess={handleBrickSuccess}
-                  onError={(err) => {
-                    const msg = typeof err === 'string' ? err : (err?.message || 'Erro no pagamento');
-                    toast.error(msg);
-                  }}
-                  customization={{
-                    visual: {
-                       style: { theme: 'default' },
-                      hidePaymentButton: false
-                    }
-                  }}
-                />
+                <div className="space-y-3">
+                  {cardError && <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{cardError}</div>}
+                  <input value={formData.email} onChange={e=>setFormData({...formData, email: e.target.value})} placeholder="Seu e-mail" className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                  <input value={cardData.number} onChange={e=>setCardData({...cardData, number: e.target.value})} placeholder="Número do cartão" className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                  <input value={cardData.name} onChange={e=>setCardData({...cardData, name: e.target.value})} placeholder="Nome impresso" className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                  <div className="grid grid-cols-3 gap-2">
+                    <input value={cardData.month} onChange={e=>setCardData({...cardData, month: e.target.value})} placeholder="MM" className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                    <input value={cardData.year} onChange={e=>setCardData({...cardData, year: e.target.value})} placeholder="AA" className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                    <input value={cardData.cvv} onChange={e=>setCardData({...cardData, cvv: e.target.value})} placeholder="CVV" className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                  </div>
+                  <button onClick={handleCardPay} disabled={isProcessing} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-white font-bold">
+                    {isProcessing ? 'Processando...' : 'Pagar com Cartão'}
+                  </button>
+                </div>
                 <div className="mt-4 flex items-center gap-3">
                   <input 
                     id="recurringToggle"

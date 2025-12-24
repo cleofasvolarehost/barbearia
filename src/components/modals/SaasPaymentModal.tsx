@@ -74,27 +74,19 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
         console.log('Creating subscription with plan_id=', plan.id, 'price=', plan.price);
         console.log('Method:', payment_method_id);
 
-        const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const tokenBearer = sessionData.session?.access_token;
+        const response = await apiFetch('/api/iugu/checkout/pix', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-            },
+            headers: { 'Content-Type': 'application/json', ...(tokenBearer ? { Authorization: `Bearer ${tokenBearer}` } : {}) },
             body: JSON.stringify({
-                token,
-                payer_email: user.email,
-                establishment_id: establishment.id,
-                plan_id: plan.id,
-                issuer_id,
-                payment_method_id,
-                card_holder_name,
-                identification,
-                recurring: payment_method_id !== 'pix',
-                description: `Assinatura ${plan.name}`
+                email: user.email,
+                amount_cents: Math.round(Number(plan.price) * 100),
+                items: [{ description: `Assinatura ${plan.name}`, quantity: 1, price_cents: Math.round(Number(plan.price) * 100) }]
             })
         });
-
-        const data = await response.json();
+        const ct = response.headers.get('content-type') || '';
+        const data = ct.includes('application/json') ? await response.json() : { success: false, mensagem: await response.text() };
         console.log('Function Response:', data);
 
         if (!response.ok) {
@@ -437,21 +429,22 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                                     onClick={async () => {
                                                         try {
                                                             setLoading(true);
-                                                            const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
+                                                            const { data: sessionData } = await (await import('../../lib/supabase')).supabase.auth.getSession();
+                                                            const token = sessionData.session?.access_token;
+                                                            const response = await (await import('../../lib/api')).apiFetch('/api/iugu/checkout/pix', {
                                                                 method: 'POST',
                                                                 headers: {
                                                                     'Content-Type': 'application/json',
-                                                                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+                                                                    ...(token ? { Authorization: `Bearer ${token}` } : {})
                                                                 },
                                                                 body: JSON.stringify({
-                                                                    payer_email: user?.email,
-                                                                    establishment_id: establishment?.id,
-                                                                    plan_id: plan.id,
-                                                                    payment_method_id: 'pix',
-                                                                    description: `Assinatura ${plan.name}`
+                                                                    email: user?.email || 'no-reply@example.com',
+                                                                    amount_cents: Math.round(Number(plan.price) * 100),
+                                                                    items: [{ description: `Assinatura ${plan.name}`, quantity: 1, price_cents: Math.round(Number(plan.price) * 100) }]
                                                                 })
                                                             });
-                                                            const data = await response.json();
+                                                            const ct = response.headers.get('content-type') || '';
+                                                            const data = ct.includes('application/json') ? await response.json() : { success: false, mensagem: await response.text() };
                                                             const qrCode = data.qr_code || data.point_of_interaction?.transaction_data?.qr_code;
                                                             const qrBase64 = data.qr_code_base64 || data.point_of_interaction?.transaction_data?.qr_code_base64;
                                                             const ticketUrl = data.ticket_url || data.point_of_interaction?.transaction_data?.ticket_url;

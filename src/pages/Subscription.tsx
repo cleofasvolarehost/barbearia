@@ -4,6 +4,7 @@ import { Sparkles, Check, Zap, Shield, Crown, AlertTriangle, ArrowRight, Calenda
 import { useEstablishment } from '../contexts/EstablishmentContext';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { apiFetch } from '../lib/api';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -57,15 +58,17 @@ export default function Subscription() {
 
       setCancelling(true);
       try {
-          const { data, error } = await supabase.functions.invoke('manage-subscription', {
-              body: {
-                  action: 'cancel',
-                  establishment_id: establishment.id
-              }
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+          const res = await apiFetch('/api/subscriptions/cancel', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+              body: JSON.stringify({ establishment_id: establishment.id })
           });
-
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
+          if (!res.ok) {
+              const t = await res.text();
+              throw new Error(t || `Erro (${res.status})`);
+          }
 
           toast.success('Assinatura cancelada com sucesso.');
           await refreshEstablishment();

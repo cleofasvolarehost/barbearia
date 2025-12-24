@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useEstablishment } from '../../contexts/EstablishmentContext';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { apiFetch } from '../../lib/api';
 import { toast } from 'react-hot-toast';
-import { MercadoPagoBrick } from '../../components/payment/MercadoPagoBrick';
+import { createCardToken } from '../../lib/iugu';
 import { TrendingUp, Clock, CreditCard, Check, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function SubscriptionManagementPage() {
@@ -153,10 +154,17 @@ export default function SubscriptionManagementPage() {
     if (!ok) return;
     setCanceling(true);
     try {
-      const { error } = await supabase.functions.invoke('manage-subscription', {
-        body: { action: 'cancel', establishment_id: establishment.id },
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const res = await apiFetch('/api/subscriptions/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ establishment_id: establishment.id }),
       });
-      if (error) throw error;
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `Erro (${res.status})`);
+      }
       toast.success('Assinatura cancelada com sucesso');
       window.location.reload();
     } catch (err: any) {
@@ -196,40 +204,35 @@ export default function SubscriptionManagementPage() {
     setPaymentStep('checkout');
   };
 
-  const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
+  const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
+  const handleCardPay = async () => {
     setLoading(true);
     try {
-        const { data, error } = await supabase.functions.invoke('create-subscription', {
-            body: {
-                token,
-                payer_email: user?.email,
-                establishment_id: establishment?.id,
-                plan_id: selectedPlan?.id,
-                issuer_id,
-                payment_method_id,
-                card_holder_name,
-                identification,
-                custom_amount: amountToPay,
-                type: paymentType,
-                description: paymentDescription,
-                days_to_add: paymentType === 'renewal' ? 
-                    (paymentDescription.includes('+1 Mês') ? 30 : 
-                     paymentDescription.includes('+3 Meses') ? 90 : 
-                     paymentDescription.includes('+1 Ano') ? 365 : 30) : undefined
-            }
-        });
-
-        if (error) {
-          const extra = (error as any)?.context?.body ? ` — ${(error as any).context.body}` : '';
-          throw new Error((error as any)?.message + extra);
-        }
-        if ((data as any)?.error) throw new Error((data as any).error);
-        toast.success('Pagamento realizado com sucesso!');
-        window.location.reload(); // Refresh state
+      const fullName = cardData.name.trim();
+      const [first_name, ...rest] = fullName.split(' ');
+      const last_name = rest.join(' ') || first_name;
+      const paymentToken = await createCardToken({
+        number: cardData.number.replace(/\s+/g, ''),
+        verification_value: cardData.cvv,
+        first_name,
+        last_name,
+        month: cardData.month,
+        year: cardData.year,
+      });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const bearer = sessionData.session?.access_token;
+      const res = await apiFetch('/api/iugu/checkout/card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) },
+        body: JSON.stringify({ payment_token: paymentToken.id, amount_cents: Math.round(amountToPay * 100), email: user?.email || 'no-reply@example.com', items: [{ description: paymentDescription || `Assinatura ${selectedPlan?.name}`, quantity: 1, price_cents: Math.round(amountToPay * 100) }] })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast.success('Pagamento realizado com sucesso!');
+      window.location.reload();
     } catch (error: any) {
-        toast.error(`Erro: ${error.message}`);
+      toast.error(`Erro: ${error.message}`);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -311,15 +314,16 @@ export default function SubscriptionManagementPage() {
                     <p className="text-gray-400 mb-6">{paymentDescription}</p>
                     <div className="text-3xl font-bold text-[#10B981] mb-8">R$ {amountToPay.toFixed(2)}</div>
                     
-                    {user?.email && (
-                        <MercadoPagoBrick 
-                            amount={amountToPay}
-                            email={user.email}
-                            onSuccess={handleBrickSuccess}
-                            onError={() => toast.error('Erro no pagamento')}
-                            customization={{ visual: { style: { theme: 'default' } } }}
-                        />
-                    )}
+                    <div className="space-y-3">
+                      <input value={cardData.number} onChange={e=>setCardData({...cardData, number: e.target.value})} placeholder="Número do cartão" className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                      <input value={cardData.name} onChange={e=>setCardData({...cardData, name: e.target.value})} placeholder="Nome impresso" className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                      <div className="grid grid-cols-3 gap-2">
+                        <input value={cardData.month} onChange={e=>setCardData({...cardData, month: e.target.value})} placeholder="MM" className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                        <input value={cardData.year} onChange={e=>setCardData({...cardData, year: e.target.value})} placeholder="AA" className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                        <input value={cardData.cvv} onChange={e=>setCardData({...cardData, cvv: e.target.value})} placeholder="CVV" className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+                      </div>
+                      <button onClick={handleCardPay} disabled={loading} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-white font-bold">{loading ? 'Processando...' : 'Pagar com Cartão'}</button>
+                    </div>
                 </div>
             ) : (
                 <>

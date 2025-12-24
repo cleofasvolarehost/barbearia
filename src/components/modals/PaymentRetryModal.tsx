@@ -3,7 +3,9 @@ import { motion } from 'motion/react';
 import { AlertTriangle, Shield, CreditCard, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useEstablishment } from '../../contexts/EstablishmentContext';
-import { MercadoPagoBrick } from '../payment/MercadoPagoBrick';
+import { createCardToken } from '../../lib/iugu';
+import { supabase } from '../../lib/supabase';
+import { apiFetch } from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface PaymentRetryModalProps {
@@ -26,44 +28,30 @@ export function PaymentRetryModal({ isOpen, onClose, onSuccess, plans }: Payment
 
   if (!isOpen) return null;
 
-  const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
+  const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
+  const handleCardPay = async () => {
     if (amountToPay < 5) {
       toast.error('Valor mínimo para cartão é R$ 5,00');
       return;
     }
     setLoading(true);
     try {
-        const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-            },
-            body: JSON.stringify({
-                token,
-                payer_email: user?.email,
-                establishment_id: establishment?.id,
-                plan_id: currentPlan?.id,
-                issuer_id,
-                payment_method_id,
-                card_holder_name,
-                identification,
-                custom_amount: amountToPay,
-                type: 'retry_payment',
-                description: 'Pagamento Pendente - Regularização',
-            })
+        const fullName = cardData.name.trim();
+        const [first_name, ...rest] = fullName.split(' ');
+        const last_name = rest.join(' ') || first_name;
+        const token = await createCardToken({ number: cardData.number.replace(/\s+/g, ''), verification_value: cardData.cvv, first_name, last_name, month: cardData.month, year: cardData.year });
+        const { data: sessionData } = await supabase.auth.getSession();
+        const bearer = sessionData.session?.access_token;
+        const response = await apiFetch('/api/iugu/checkout/card', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) },
+          body: JSON.stringify({ payment_token: token.id, amount_cents: Math.round(amountToPay * 100), email: user?.email || 'no-reply@example.com', items: [{ description: 'Pagamento Pendente - Regularização', quantity: 1, price_cents: Math.round(amountToPay * 100) }] })
         });
-
-        const data = await response.json();
-        
-        if (!response.ok) throw new Error(data.error || 'Erro no pagamento');
-
-        if (data.status === 'approved') {
+        if (!response.ok) throw new Error(await response.text());
+        {
             toast.success('Pagamento regularizado! Obrigado.');
             await onSuccess();
             onClose();
-        } else {
-            toast.error('Pagamento não aprovado. Tente outro cartão.');
         }
 
     } catch (error: any) {
@@ -106,23 +94,16 @@ export function PaymentRetryModal({ isOpen, onClose, onSuccess, plans }: Payment
                 <span className="text-xl font-bold text-white">R$ {amountToPay.toFixed(2)}</span>
             </div>
 
-            <MercadoPagoBrick 
-                amount={amountToPay}
-                email={user?.email || ''}
-                paymentType={'credit_card'}
-                onSuccess={handleBrickSuccess}
-                onError={(err) => {
-                  const msg = typeof err === 'string' ? err : (err?.message || 'Erro no pagamento');
-                  const extra = (err as any)?.context?.body ? ` — ${(err as any).context.body}` : '';
-                  toast.error(msg + extra);
-                }}
-                customization={{
-                    visual: {
-                        style: { theme: 'default' },
-                        hidePaymentButton: false
-                    }
-                }}
-            />
+            <div className="space-y-3">
+              <input value={cardData.number} onChange={e=>setCardData({...cardData, number: e.target.value})} placeholder="Número do cartão" className="w-full px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+              <input value={cardData.name} onChange={e=>setCardData({...cardData, name: e.target.value})} placeholder="Nome impresso" className="w-full px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+              <div className="grid grid-cols-3 gap-2">
+                <input value={cardData.month} onChange={e=>setCardData({...cardData, month: e.target.value})} placeholder="MM" className="px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+                <input value={cardData.year} onChange={e=>setCardData({...cardData, year: e.target.value})} placeholder="AA" className="px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+                <input value={cardData.cvv} onChange={e=>setCardData({...cardData, cvv: e.target.value})} placeholder="CVV" className="px-4 py-3 rounded-xl bg-[#1E1E1E] border border-white/10 text-white" />
+              </div>
+              <button onClick={handleCardPay} disabled={loading} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-white font-bold">{loading ? 'Processando...' : 'Pagar com Cartão'}</button>
+            </div>
             
             <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-500">
                 <Shield className="w-3 h-3" />
