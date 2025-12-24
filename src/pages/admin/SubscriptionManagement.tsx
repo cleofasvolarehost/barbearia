@@ -15,16 +15,6 @@ export default function SubscriptionManagementPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Redirect if no active subscription (User should go to Landing Page to pick a plan)
-   useEffect(() => {
-     if (!establishmentLoading && (!establishment || establishment.subscription_status !== 'active')) {
-          // Redirect to Landing Page (#pricing) so they can pick a plan and go to Fast Checkout
-          // Using window.location.href to ensure anchor scrolling works reliably
-          window.location.href = '/#pricing'; 
-      }
-   }, [establishment, establishmentLoading, navigate]);
-  const [activeTab, setActiveTab] = useState<'plans' | 'renew' | 'payment'>('plans');
-  
   // Payment State
   const [paymentStep, setPaymentStep] = useState<'selection' | 'checkout'>('selection');
   const [amountToPay, setAmountToPay] = useState<number>(0);
@@ -41,7 +31,6 @@ export default function SubscriptionManagementPage() {
       const { data, error } = await supabase
         .from('saas_plans')
         .select('*')
-        // .eq('active', true) // Column might not exist yet
         .order('price');
         
       if (error) throw error;
@@ -53,6 +42,99 @@ export default function SubscriptionManagementPage() {
       setLoading(false);
     }
   };
+
+  // ------------------------------------------------------------------
+  // VIEW 1: SALES SHOWCASE (No Active Subscription)
+  // ------------------------------------------------------------------
+  if (!loading && !establishmentLoading && (!establishment || establishment.subscription_status !== 'active')) {
+      return (
+        <div className="min-h-screen bg-[#121212] text-white p-6">
+            <div className="max-w-7xl mx-auto mt-10">
+                <div className="text-center mb-16">
+                    <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                        Escolha seu <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF]">Plano Ideal</span>
+                    </h1>
+                    <p className="text-gray-400 text-xl max-w-2xl mx-auto">
+                        Você está a um passo de transformar sua barbearia. Escolha o plano que melhor se adapta ao seu momento.
+                    </p>
+                </div>
+
+                {plans.length === 0 ? (
+                    <div className="text-center py-20">
+                        <Loader2 className="w-10 h-10 text-[#7C3AED] animate-spin mx-auto mb-4" />
+                        <p className="text-gray-400">Carregando planos...</p>
+                    </div>
+                ) : (
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {plans.map((plan, index) => {
+                            // Simple logic to highlight the middle plan or specific plan
+                            const isHighlighted = index === 1 || plan.name.includes('Pro'); 
+                            
+                            return (
+                                <div 
+                                    key={plan.id} 
+                                    className={`relative p-8 rounded-3xl border transition-all duration-300 ${
+                                    isHighlighted
+                                        ? 'bg-gradient-to-b from-[#7C3AED]/10 to-transparent border-[#7C3AED] shadow-2xl shadow-[#7C3AED]/20 scale-105 z-10'
+                                        : 'bg-white/5 backdrop-blur border-white/10 hover:border-white/20'
+                                    }`}
+                                >
+                                    {isHighlighted && (
+                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-sm font-bold text-white shadow-lg">
+                                            Mais Popular
+                                        </div>
+                                    )}
+
+                                    <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                                    <p className="text-gray-400 mb-6 min-h-[48px]">
+                                        {plan.description || 'A solução completa para sua gestão.'}
+                                    </p>
+
+                                    <div className="mb-8">
+                                        <div className="flex items-end gap-1">
+                                            <span className="text-5xl font-bold text-white">R$ {Number(plan.price).toFixed(0)}</span>
+                                            <span className="text-gray-400 mb-1">/{plan.interval_days === 30 ? 'mês' : 'ano'}</span>
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => navigate(`/checkout/start?plan=${plan.id}`)}
+                                        className={`w-full py-4 rounded-full font-bold text-lg mb-8 transition-all ${
+                                            isHighlighted
+                                            ? 'bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-white hover:shadow-lg hover:shadow-[#7C3AED]/50 hover:scale-[1.02]'
+                                            : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+                                        }`}
+                                    >
+                                        Assinar Agora
+                                    </button>
+
+                                    <ul className="space-y-4">
+                                        {(plan.features || [
+                                            'Agendamento Ilimitado',
+                                            'Gestão Financeira',
+                                            'Suporte Prioritário'
+                                        ]).map((feature: string, i: number) => (
+                                            <li key={i} className="flex items-start gap-3">
+                                                <div className={`mt-1 p-1 rounded-full ${isHighlighted ? 'bg-[#10B981]/20' : 'bg-white/10'}`}>
+                                                    <Check className={`w-3 h-3 ${isHighlighted ? 'text-[#10B981]' : 'text-gray-400'}`} />
+                                                </div>
+                                                <span className="text-gray-300 text-sm">{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+      );
+  }
+
+  // ------------------------------------------------------------------
+  // VIEW 2: MANAGEMENT DASHBOARD (Active Subscription)
+  // ------------------------------------------------------------------
 
   const currentPlan = plans.find(p => p.name === establishment?.subscription_plan);
   const currentPrice = currentPlan ? Number(currentPlan.price) : 0;
