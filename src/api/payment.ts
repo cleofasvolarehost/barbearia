@@ -43,7 +43,9 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
       try {
         console.error('Iugu Pix error details:', payload);
       } catch {}
-      throw new Error((payload as any).error || (payload as any).mensagem || `Erro (${res.status}) ao gerar Pix`);
+      const details = (payload as any)?.details;
+      const detailMsg = details?.errors ? JSON.stringify(details.errors) : undefined;
+      throw new Error(detailMsg || (payload as any).mensagem || (payload as any).error || `Erro (${res.status}) ao gerar Pix`);
     }
     const data = (payload as any).data || payload || {};
     const qrCode = data?.pix?.qrcode || data?.pix_qrcode || data?.qr_code || '';
