@@ -418,18 +418,16 @@ export default function FastCheckoutPage() {
                     </div>
                     <div className="space-y-3">
                       <div className="text-center text-xs text-gray-500">Escaneie o QR Code ou copie o código</div>
-                      <div className="relative">
-                        <textarea
-                          readOnly
-                          value={pixData.qr_code}
-                          className="w-full bg-black/40 border border-white/10 rounded-xl p-4 pr-12 text-xs text-gray-400 font-mono resize-none focus:border-[#7C3AED] outline-none h-24 transition-colors"
-                        />
+                      <div className="relative group">
+                        <div className="w-full bg-black/30 border border-white/10 rounded-xl p-4 pr-14 text-[11px] text-gray-300 font-mono leading-relaxed break-all max-h-36 overflow-y-auto custom-scrollbar-hidden shadow-inner">
+                          {pixData.qr_code}
+                        </div>
                         <button
                           onClick={handleCopyPix}
-                          className="absolute top-2 right-2 p-2 bg-[#7C3AED]/10 hover:bg-[#7C3AED] text-[#7C3AED] hover:text-white rounded-lg transition-all"
-                          title="Copiar código"
+                          className="absolute top-2 right-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-white text-xs font-bold hover:opacity-90 transition-all shadow-lg shadow-[#7C3AED]/30"
+                          title="Copiar código PIX"
                         >
-                          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          {copied ? 'Copiado!' : 'Copiar'}
                         </button>
                       </div>
                     </div>
@@ -455,6 +453,10 @@ export default function FastCheckoutPage() {
           </div>
 
         </motion.div>
+        <style>{`
+          .custom-scrollbar-hidden { scrollbar-width: none; -ms-overflow-style: none; }
+          .custom-scrollbar-hidden::-webkit-scrollbar { width: 0; height: 0; }
+        `}</style>
 
         {/* Trust Badges */}
         <motion.div
