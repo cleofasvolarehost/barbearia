@@ -3,6 +3,7 @@ const cors = require('cors');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const iuguRoutes = require('./routes/iuguRoutes');
+const assinaturaRoutes = require('./routes/assinaturas');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/iugu', iuguRoutes);
+app.use('/api/assinaturas', assinaturaRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'barbearia-backend' });

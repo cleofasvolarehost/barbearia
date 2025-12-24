@@ -42,6 +42,9 @@ import Subscription from "./pages/Subscription";
 import FastCheckoutPage from "./pages/checkout/FastCheckoutPage";
 import SubscriptionManagementPage from "./pages/admin/SubscriptionManagement"; // Import new page
 import SetupWelcome from "./pages/SetupWelcome"; // Import welcome page
+import Planos from "./pages/Planos";
+import Checkout from "./pages/Checkout";
+import CheckoutSucesso from "./pages/CheckoutSucesso";
 import { useAuth } from "./hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
@@ -137,6 +140,12 @@ function App() {
                 <Route path="/admin/appointments" element={<AdminAppointmentsPage />} />
                 <Route path="/clientes" element={<Clients />} />
               </Route>
+
+              {/* ROUTE A: ACQUISITION TUNNEL (New Customers) */}
+              {/* Guest Only - Managed inside component logic */}
+              <Route path="/planos" element={<Planos />} />
+              <Route path="/checkout/:planoId" element={<Checkout />} />
+              <Route path="/checkout/sucesso" element={<CheckoutSucesso />} />
 
               {/* ROUTE B: MANAGEMENT HUB (Active Customers) */}
               {/* Requires Login (Owner) */}
