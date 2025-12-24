@@ -109,7 +109,8 @@ export function PaymentRetryModal({ isOpen, onClose, onSuccess, plans }: Payment
                 onSuccess={handleBrickSuccess}
                 onError={(err) => {
                   const msg = typeof err === 'string' ? err : (err?.message || 'Erro no pagamento');
-                  toast.error(msg);
+                  const extra = (err as any)?.context?.body ? ` — ${(err as any).context.body}` : '';
+                  toast.error(msg + extra);
                 }}
                 customization={{
                     visual: {

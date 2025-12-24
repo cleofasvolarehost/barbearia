@@ -219,7 +219,10 @@ export default function SubscriptionManagementPage() {
             }
         });
 
-        if (error) throw error;
+        if (error) {
+          const extra = (error as any)?.context?.body ? ` — ${(error as any).context.body}` : '';
+          throw new Error((error as any)?.message + extra);
+        }
         if ((data as any)?.error) throw new Error((data as any).error);
         toast.success('Pagamento realizado com sucesso!');
         window.location.reload(); // Refresh state

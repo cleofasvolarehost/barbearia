@@ -172,7 +172,8 @@ export default function FastCheckoutPage() {
 
     } catch (error: any) {
         console.error('Checkout Error:', error);
-        toast.error(error.message || 'Erro ao processar pagamento');
+        const extra = error?.context?.body ? ` — ${error.context.body}` : '';
+        toast.error((error.message || 'Erro ao processar pagamento') + extra);
         
         // Save Lead logic could be here if we want to separate it from the atomic function
         // But optimally the Edge Function handles the "Lead" creation on failure internally
@@ -206,7 +207,8 @@ export default function FastCheckoutPage() {
         toast.error('Falha ao gerar QR Pix');
       }
     } catch (e: any) {
-      toast.error(e.message || 'Erro ao gerar PIX');
+      const extra = e?.context?.body ? ` — ${e.context.body}` : '';
+      toast.error((e.message || 'Erro ao gerar PIX') + extra);
     } finally {
       setIsProcessing(false);
     }

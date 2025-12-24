@@ -221,7 +221,8 @@ export function NewPurchaseModal({ isOpen, onClose, plans, onSuccess }: NewPurch
                                 onSuccess={handleBrickSuccess}
                                 onError={(err) => {
                                   const msg = typeof err === 'string' ? err : (err?.message || 'Erro no pagamento');
-                                  toast.error(msg);
+                                  const extra = (err as any)?.context?.body ? ` — ${(err as any).context.body}` : '';
+                                  toast.error(msg + extra);
                                 }}
                                 customization={{
                                     visual: {
