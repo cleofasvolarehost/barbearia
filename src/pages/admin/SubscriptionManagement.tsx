@@ -18,7 +18,7 @@ export default function SubscriptionManagementPage() {
   const [paymentStep, setPaymentStep] = useState<'selection' | 'checkout'>('selection');
   const [amountToPay, setAmountToPay] = useState<number>(0);
   const [paymentDescription, setPaymentDescription] = useState('');
-  const [paymentType, setPaymentType] = useState<'upgrade' | 'renewal'>('renewal');
+  const [paymentType, setPaymentType] = useState<'upgrade' | 'renewal' | 'new_subscription'>('renewal');
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function SubscriptionManagementPage() {
       const { data, error } = await supabase
         .from('saas_plans')
         .select('*')
-        .eq('active', true)
+        // .eq('active', true) // Column might not exist yet
         .order('price');
         
       if (error) throw error;
@@ -48,11 +48,14 @@ export default function SubscriptionManagementPage() {
 
   const handleSelectPlan = (plan: any) => {
     const planPrice = Number(plan.price);
-    if (planPrice > currentPrice) {
-        const diff = planPrice - currentPrice;
+    
+    // Allow selection if no current plan OR upgrade
+    if (currentPrice === 0 || planPrice > currentPrice) {
+        const diff = currentPrice === 0 ? planPrice : (planPrice - currentPrice);
+        
         setAmountToPay(diff > 0 ? diff : planPrice);
-        setPaymentDescription(`Upgrade para ${plan.name}`);
-        setPaymentType('upgrade');
+        setPaymentDescription(currentPrice === 0 ? `Assinatura ${plan.name}` : `Upgrade para ${plan.name}`);
+        setPaymentType(currentPrice === 0 ? 'new_subscription' : 'upgrade');
         setSelectedPlan(plan);
         setPaymentStep('checkout');
     } else if (planPrice < currentPrice) {
@@ -162,24 +165,30 @@ export default function SubscriptionManagementPage() {
                     {activeTab === 'plans' && (
                         <div className="space-y-4">
                             <h2 className="text-2xl font-bold mb-4">Planos Disponíveis</h2>
-                            {plans.map(plan => {
-                                const isCurrent = plan.name === establishment?.subscription_plan;
-                                return (
-                                    <div key={plan.id} className={`p-6 rounded-2xl border ${isCurrent ? 'border-[#10B981] bg-[#10B981]/10' : 'border-white/10 bg-white/5'} flex justify-between items-center`}>
-                                        <div>
-                                            <h3 className="font-bold text-lg">{plan.name}</h3>
-                                            <p className="text-gray-400">R$ {plan.price}/{plan.interval_days === 30 ? 'mês' : 'ano'}</p>
+                            {plans.length === 0 ? (
+                                <div className="text-center py-10">
+                                    <p className="text-gray-400">Nenhum plano disponível no momento.</p>
+                                </div>
+                            ) : (
+                                plans.map(plan => {
+                                    const isCurrent = plan.name === establishment?.subscription_plan;
+                                    return (
+                                        <div key={plan.id} className={`p-6 rounded-2xl border ${isCurrent ? 'border-[#10B981] bg-[#10B981]/10' : 'border-white/10 bg-white/5'} flex justify-between items-center`}>
+                                            <div>
+                                                <h3 className="font-bold text-lg">{plan.name}</h3>
+                                                <p className="text-gray-400">R$ {plan.price}/{plan.interval_days === 30 ? 'mês' : 'ano'}</p>
+                                            </div>
+                                            {isCurrent ? (
+                                                <span className="text-[#10B981] font-bold flex items-center gap-2"><Check className="w-4 h-4" /> Atual</span>
+                                            ) : (
+                                                <button onClick={() => handleSelectPlan(plan)} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg font-bold">
+                                                    Selecionar
+                                                </button>
+                                            )}
                                         </div>
-                                        {isCurrent ? (
-                                            <span className="text-[#10B981] font-bold flex items-center gap-2"><Check className="w-4 h-4" /> Atual</span>
-                                        ) : (
-                                            <button onClick={() => handleSelectPlan(plan)} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg font-bold">
-                                                Selecionar
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })
+                            )}
                         </div>
                     )}
 
