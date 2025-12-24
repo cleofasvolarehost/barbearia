@@ -54,11 +54,17 @@ serve(async (req) => {
         if (!token) validationErrors.push('Missing token for card payment');
         if (!issuer_id) validationErrors.push('Missing issuer_id for card payment');
         if (!card_holder_name) validationErrors.push('Missing card_holder_name for card payment');
+        if (installments === undefined || Number(installments) <= 0) {
+            validationErrors.push('Missing or invalid installments for card payment');
+        }
     } else if (!identification) {
         validationErrors.push('Missing identification for Pix payment');
     }
     if (validationErrors.length > 0) {
-        throw new Error(`Validation failed: ${validationErrors.join(', ')}`);
+        return new Response(
+            JSON.stringify({ error: 'Validation failed', details: validationErrors }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
     }
 
     // Resolve establishment when not provided (logged-in user without shop yet)
