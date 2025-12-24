@@ -128,6 +128,40 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
 
         const bricksBuilder = mp.bricks();
 
+        const defaultCustomization = {
+            paymentMethods: {
+                creditCard: 'all',
+                debitCard: 'all',
+                ticket: 'all',
+                bankTransfer: 'all',
+                maxInstallments: 1
+            },
+            visual: {
+                style: {
+                    theme: 'default' as const
+                }
+            }
+        };
+
+        const customizationConfig = {
+            paymentMethods: {
+                ...defaultCustomization.paymentMethods,
+                ...customization?.paymentMethods
+            },
+            visual: {
+                ...defaultCustomization.visual,
+                ...customization?.visual,
+                style: {
+                    ...defaultCustomization.visual.style,
+                    ...customization?.visual?.style,
+                    customVariables: {
+                        ...defaultCustomization.visual.style.customVariables,
+                        ...customization?.visual?.style?.customVariables
+                    }
+                }
+            }
+        };
+
         const settings = {
             initialization: {
                 amount: Number(finalAmount),
@@ -136,20 +170,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
                     entityType: 'individual'
                 },
             },
-            customization: customization || {
-                paymentMethods: {
-                    creditCard: 'all',
-                    debitCard: 'all',
-                    ticket: 'all',
-                    bankTransfer: 'all',
-                    maxInstallments: 1
-                },
-                visual: {
-                    style: {
-                        theme: 'default' // Changed from 'dark' to 'default' to fix 404/400 errors
-                    }
-                }
-            },
+            customization: customizationConfig,
             callbacks: {
                 onReady: () => {
                     console.log('Brick Ready');
