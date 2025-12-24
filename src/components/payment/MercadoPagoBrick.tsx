@@ -120,6 +120,24 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
         
         let publicKey = propPublicKey || envKey;
 
+        // Normalize: remove leading/trailing whitespace
+        if (typeof publicKey === 'string') {
+            publicKey = publicKey.trim();
+        }
+
+        // If internal whitespace exists, attempt safe cleanup
+        if (typeof publicKey === 'string' && /\s/.test(publicKey)) {
+            const cleaned = publicKey.replace(/\s+/g, '');
+            // Accept cleaned only if it matches expected pattern
+            if (/^(TEST|APP_USR)-[A-Za-z0-9-]+$/.test(cleaned)) {
+                publicKey = cleaned;
+            } else {
+                setInitError('Sua chave pública do Mercado Pago contém espaços inválidos. Verifique em Configurações de Pagamento.');
+                onError('MercadoPago.js: public_key inválida por conter espaços');
+                return;
+            }
+        }
+
         // DEBUG LOGGING
         console.log("MP Init Status:", publicKey ? "Key Found (" + publicKey.slice(0, 8) + "...)" : "Key Missing");
         console.log("Passing Price to Modal (Final):", finalAmount);
