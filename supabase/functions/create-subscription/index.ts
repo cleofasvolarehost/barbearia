@@ -32,6 +32,8 @@ serve(async (req) => {
 
     // 1. Strict Validation
     if (!plan_id) throw new Error('Missing plan_id');
+    if (!payer_email) throw new Error('Missing payer_email');
+    if (!payment_method_id) throw new Error('Missing payment_method_id');
     // Resolve establishment when not provided (logged-in user without shop yet)
     let resolvedEstablishmentId = establishment_id;
     if (!resolvedEstablishmentId && payer_email) {
@@ -156,14 +158,15 @@ serve(async (req) => {
         payment_method_id: payment_method_id,
         payer: payer,
         installments: installments || 1, // Default to 1 if missing
+        currency_id: 'BRL',
         metadata: {
             type: type || 'saas_subscription', 
             establishment_id: establishment_id,
             plan_id: plan_id,
             plan_name: plan.name
         },
-            notification_url: `${supabaseUrl}/functions/v1/mp-webhook`
-        };
+        notification_url: `${supabaseUrl}/functions/v1/mp-webhook`
+    };
 
     // If Card (has token)
     if (token) {
@@ -222,7 +225,8 @@ serve(async (req) => {
 
     if (!response.ok) {
         console.error('MP Error:', data);
-        throw new Error(data.message || 'Failed to create payment');
+        const cause = Array.isArray(data?.cause) && data.cause.length ? ` — ${data.cause[0]?.description || data.cause[0]?.code}` : '';
+        throw new Error((data.message || data.error || 'Failed to create payment') + cause);
     }
 
     // 5. Insert into Subscriptions Table
