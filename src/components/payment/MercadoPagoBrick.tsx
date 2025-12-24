@@ -156,6 +156,58 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
 
         const bricksBuilder = mp.bricks();
 
+        const defaultCustomization = {
+            paymentMethods: {
+                creditCard: 'all',
+                debitCard: 'all',
+                ticket: 'all',
+                bankTransfer: 'all',
+                maxInstallments: 1
+            },
+            visual: {
+                style: {
+                    theme: 'default' as const,
+                    customVariables: {}
+                }
+            }
+        };
+
+        const mergedPaymentMethods = {
+            ...defaultCustomization.paymentMethods,
+            ...customization?.paymentMethods
+        };
+
+        const sanitizedPaymentMethods = Object.fromEntries(
+            Object.entries(mergedPaymentMethods).filter(([key, value]) => {
+                if (key === 'maxInstallments') {
+                    return value !== undefined && value !== null;
+                }
+
+                if (Array.isArray(value)) {
+                    return value.length > 0;
+                }
+
+                return Boolean(value);
+            })
+        ) as typeof mergedPaymentMethods;
+
+        const hasSelectedMethod = ['creditCard', 'debitCard', 'ticket', 'bankTransfer'].some(
+            (method) => Boolean(sanitizedPaymentMethods[method as keyof typeof sanitizedPaymentMethods])
+        );
+
+        const customizationConfig = {
+            paymentMethods: hasSelectedMethod ? sanitizedPaymentMethods : defaultCustomization.paymentMethods,
+            visual: {
+                ...defaultCustomization.visual,
+                ...customization?.visual,
+                style: {
+                    ...defaultCustomization.visual.style,
+                    ...customization?.visual?.style,
+                    customVariables: customization?.visual?.style?.customVariables ?? defaultCustomization.visual.style.customVariables
+                }
+            }
+        };
+
         const settings = {
             initialization: {
                 amount: Number(finalAmount),
@@ -166,20 +218,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
                     entityType: 'individual'
                 },
             },
-            customization: customization || {
-                paymentMethods: {
-                    creditCard: 'all',
-                    debitCard: 'all',
-                    ticket: 'all',
-                    bankTransfer: 'all',
-                    maxInstallments: 1
-                },
-                visual: {
-                    style: {
-                        theme: 'default' // Changed from 'dark' to 'default' to fix 404/400 errors
-                    }
-                }
-            },
+            customization: customizationConfig,
             callbacks: {
                 onReady: () => {
                     console.log('Brick Ready');
