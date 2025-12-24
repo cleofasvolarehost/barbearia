@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { QrCode, Copy, Check, MessageCircle, ArrowLeft, Timer, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+import { QrCode, Copy, Check, MessageCircle, ArrowLeft, Timer, Sparkles, AlertCircle, Loader2, CreditCard } from 'lucide-react';
+import { apiFetch } from '../lib/api';
+import { supabase } from '../lib/supabase';
+import { createCardToken } from '../lib/iugu';
 import { createPixPayment } from '../api/payment';
 
-export type PaymentMethod = 'pix-auto' | 'pix-manual' | 'in-person' | null;
+export type PaymentMethod = 'pix-auto' | 'pix-manual' | 'card' | 'in-person' | null;
 
 interface PaymentScreenProps {
   method: PaymentMethod;
@@ -18,6 +21,8 @@ interface PaymentScreenProps {
   establishmentId?: string;
   clientName?: string;
   clientEmail?: string;
+  planAmountCents?: number;
+  iuguAccountId?: string;
 }
 
 export function PaymentScreen({ 
@@ -40,6 +45,9 @@ export function PaymentScreen({
   const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string } | null>(null);
   const [loadingPix, setLoadingPix] = useState(false);
   const [errorPix, setErrorPix] = useState<string | null>(null);
+  const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
+  const [cardLoading, setCardLoading] = useState(false);
+  const [cardError, setCardError] = useState<string | null>(null);
 
   // Generate Pix if Auto
   useEffect(() => {
@@ -82,6 +90,80 @@ export function PaymentScreen({
       return () => clearInterval(timer);
     }
   }, [method, timeLeft]);
+
+  if (method === 'card') {
+    return (
+      <div className="min-h-[60vh] bg-[#050505] text-white flex flex-col">
+        <div className="sticky top-0 z-10 bg-[#050505]/95 backdrop-blur-md pb-4 border-b border-white/5 shadow-xl">
+          <div className="px-4 pt-6">
+            <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar
+            </button>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#2DD4BF] flex items-center justify-center shadow-[0_0_20px_rgba(124,58,237,0.4)]">
+                <CreditCard className="w-6 h-6 text-white" />
+              </div>
+              <h1 className="text-xl font-black">Cartão de Crédito</h1>
+            </div>
+          </div>
+        </div>
+        <div className="px-4 pb-24 pt-6 max-w-md mx-auto w-full flex-1">
+          {cardError && (
+            <div className="p-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{cardError}</div>
+          )}
+          <div className="space-y-3">
+            <input value={cardData.number} onChange={e=>setCardData({...cardData, number: e.target.value})} placeholder="Número do cartão" className="w-full bg-[#121212] border border-white/10 rounded-lg px-3 py-2 text-white" />
+            <input value={cardData.name} onChange={e=>setCardData({...cardData, name: e.target.value})} placeholder="Nome impresso" className="w-full bg-[#121212] border border-white/10 rounded-lg px-3 py-2 text-white" />
+            <div className="grid grid-cols-3 gap-2">
+              <input value={cardData.month} onChange={e=>setCardData({...cardData, month: e.target.value})} placeholder="MM" className="bg-[#121212] border border-white/10 rounded-lg px-3 py-2 text-white" />
+              <input value={cardData.year} onChange={e=>setCardData({...cardData, year: e.target.value})} placeholder="AA" className="bg-[#121212] border border-white/10 rounded-lg px-3 py-2 text-white" />
+              <input value={cardData.cvv} onChange={e=>setCardData({...cardData, cvv: e.target.value})} placeholder="CVV" className="bg-[#121212] border border-white/10 rounded-lg px-3 py-2 text-white" />
+            </div>
+            <button
+              onClick={async ()=>{
+                try {
+                  setCardLoading(true);
+                  setCardError(null);
+                  const { data: sessionData } = await supabase.auth.getSession();
+                  const token = sessionData.session?.access_token;
+                  if (!token) throw new Error('Sessão inválida');
+                  const fullName = cardData.name.trim();
+                  const [first_name, ...rest] = fullName.split(' ');
+                  const last_name = rest.join(' ') || first_name;
+                  const paymentToken = await createCardToken({
+                    number: cardData.number.replace(/\s+/g, ''),
+                    verification_value: cardData.cvv,
+                    first_name,
+                    last_name,
+                    month: cardData.month,
+                    year: cardData.year,
+                  });
+                  const res = await apiFetch('/api/iugu/checkout/card', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ payment_token: paymentToken.id, amount_cents: Math.round((amount || 0) * 100), email: clientEmail || '' }),
+                  });
+                  const ct = res.headers.get('content-type') || '';
+                  const payload = ct.includes('application/json') ? await res.json() : { mensagem: await res.text() };
+                  if (!res.ok || !(payload as any).success) throw new Error((payload as any).mensagem || `Erro (${res.status})`);
+                  if (onSuccess) onSuccess();
+                } catch (e: any) {
+                  setCardError(e.message || 'Falha no pagamento');
+                } finally {
+                  setCardLoading(false);
+                }
+              }}
+              disabled={cardLoading}
+              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] transition-all font-bold"
+            >
+              {cardLoading ? 'Processando...' : 'Pagar com Cartão'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);

@@ -58,6 +58,22 @@ export default function Checkout() {
     }
   }, [planoId]);
 
+  useEffect(() => {
+    const checkActiveSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data?.status === 'active') {
+        navigate('/minha-assinatura');
+      }
+    };
+    checkActiveSubscription();
+  }, [navigate]);
+
   const fetchPlano = async () => {
     try {
       const { data, error } = await supabase
