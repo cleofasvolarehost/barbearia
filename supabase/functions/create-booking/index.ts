@@ -55,7 +55,35 @@ serve(async (req) => {
       throw new Error('Supabase environment not configured.');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceRole);
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    if (!authHeader) {
+      throw new Error('Missing Authorization header.');
+    }
+
+    const token = authHeader.replace('Bearer ', '').trim();
+    if (!token) {
+      throw new Error('Missing Authorization token.');
+    }
+
+    const supabase = createClient(
+      supabaseUrl,
+      supabaseServiceRole,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      throw new Error('Unauthorized.');
+    }
+
+    if (user.id !== userId) {
+      throw new Error('Forbidden: user mismatch.');
+    }
 
     const { data: bookingResult, error: bookingError } = await supabase.rpc('create_booking_v2', {
       p_data: date,
