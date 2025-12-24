@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, ShieldCheck, CreditCard, User, Mail, Phone, ChevronDown, ChevronUp, Check, Zap, Calendar, Loader2, AlertTriangle } from 'lucide-react';
+import { Lock, ShieldCheck, CreditCard, User, Mail, Phone, ChevronDown, ChevronUp, Check, Zap, Calendar, Loader2, AlertTriangle, Copy } from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -34,6 +34,7 @@ export default function FastCheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [pixData, setPixData] = useState<{ qr_code: string; qr_code_base64: string; ticket_url?: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -196,6 +197,14 @@ export default function FastCheckoutPage() {
     } finally {
       setIsProcessing(false);
     }
+  };
+  
+  const handleCopyPix = () => {
+    if (!pixData?.qr_code) return;
+    navigator.clipboard.writeText(pixData.qr_code);
+    setCopied(true);
+    toast.success('Código PIX copiado!');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   // If loading plan
@@ -407,7 +416,23 @@ export default function FastCheckoutPage() {
                     <div className="bg-white p-4 rounded-xl">
                       <img src={`data:image/png;base64,${pixData.qr_code_base64}`} alt="QR Pix" className="w-48 h-48 mx-auto" />
                     </div>
-                    <div className="text-center text-xs text-gray-500">Escaneie o QR Code ou copie o código</div>
+                    <div className="space-y-3">
+                      <div className="text-center text-xs text-gray-500">Escaneie o QR Code ou copie o código</div>
+                      <div className="relative">
+                        <textarea
+                          readOnly
+                          value={pixData.qr_code}
+                          className="w-full bg-black/40 border border-white/10 rounded-xl p-4 pr-12 text-xs text-gray-400 font-mono resize-none focus:border-[#7C3AED] outline-none h-24 transition-colors"
+                        />
+                        <button
+                          onClick={handleCopyPix}
+                          className="absolute top-2 right-2 p-2 bg-[#7C3AED]/10 hover:bg-[#7C3AED] text-[#7C3AED] hover:text-white rounded-lg transition-all"
+                          title="Copiar código"
+                        >
+                          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
