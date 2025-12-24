@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { motion } from 'motion/react'; // Ajustado import
+import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 import { 
   Sparkles, 
   Calendar, 
@@ -26,6 +27,22 @@ export default function LandingPage() {
   const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [dbPlans, setDbPlans] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch plans from DB to get real IDs
+    supabase
+      .from('saas_plans')
+      .select('*')
+      .order('price')
+      .then(({ data }) => {
+        if (data) setDbPlans(data);
+      });
+  }, []);
+
+  const handleBuyPlan = (planId: string) => {
+      navigate(`/checkout/start?plan=${planId}`);
+  };
 
   const onEnterApp = () => {
     navigate('/cadastro');
@@ -432,7 +449,7 @@ export default function LandingPage() {
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {plans.map((plan, index) => (
+            {(dbPlans.length > 0 ? dbPlans : plans).map((plan, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
@@ -440,38 +457,38 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
                 className={`relative p-8 rounded-3xl border ${
-                  plan.highlighted
+                  plan.highlighted || index === 1 // Fallback highlight for middle plan
                     ? 'bg-gradient-to-b from-[#7C3AED]/10 to-transparent border-[#7C3AED] shadow-2xl shadow-[#7C3AED]/20 scale-105'
                     : 'bg-white/5 backdrop-blur border-white/10'
                 }`}
               >
-                {plan.highlighted && (
+                {(plan.highlighted || index === 1) && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-sm font-semibold">
                     Mais Popular
                   </div>
                 )}
 
                 <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                <p className="text-gray-400 mb-6">{plan.description}</p>
+                <p className="text-gray-400 mb-6">{plan.description || 'Plano completo para sua barbearia'}</p>
 
                 <div className="mb-6">
-                  <span className="text-5xl font-bold">R$ {plan.price}</span>
-                  <span className="text-gray-400">/mês</span>
+                  <span className="text-5xl font-bold">R$ {Number(plan.price).toFixed(0)}</span>
+                  <span className="text-gray-400">/{plan.interval_days === 90 ? 'trimestre' : plan.interval_days === 365 ? 'ano' : 'mês'}</span>
                 </div>
 
                 <button
-                  onClick={onEnterApp}
+                  onClick={() => plan.id ? handleBuyPlan(plan.id) : onEnterApp()}
                   className={`w-full py-4 rounded-full font-semibold mb-8 transition-all ${
-                    plan.highlighted
+                    plan.highlighted || index === 1
                       ? 'bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-lg hover:shadow-[#7C3AED]/50'
                       : 'border-2 border-white/20 hover:bg-white/5'
                   }`}
                 >
-                  Começar Agora
+                  {plan.id ? 'Assinar Agora' : 'Começar Agora'}
                 </button>
 
                 <ul className="space-y-3">
-                  {plan.features.map((feature, i) => (
+                  {(plan.features || []).map((feature: string, i: number) => (
                     <li key={i} className="flex items-start space-x-3">
                       <Check className="w-5 h-5 text-[#2DD4BF] flex-shrink-0 mt-0.5" />
                       <span className="text-gray-300">{feature}</span>
