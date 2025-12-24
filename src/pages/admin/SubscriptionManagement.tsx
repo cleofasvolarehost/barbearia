@@ -140,6 +140,12 @@ export default function SubscriptionManagementPage() {
   const currentPlan = plans.find(p => p.name === establishment?.subscription_plan);
   const currentPrice = currentPlan ? Number(currentPlan.price) : 0;
 
+  const endDate = establishment?.subscription_end_date ? new Date(establishment.subscription_end_date) : null;
+  const endDateFormatted = endDate ? endDate.toLocaleDateString() : '-';
+  const now = new Date();
+  const daysLeft = endDate ? Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : null;
+  const status = establishment?.subscription_status || 'none';
+
   const handleSelectPlan = (plan: any) => {
     const planPrice = Number(plan.price);
     
@@ -209,6 +215,34 @@ export default function SubscriptionManagementPage() {
     <div className="min-h-screen bg-[#121212] text-white p-6">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">Gerenciar Assinatura</h1>
+        {/* Resumo da Assinatura */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-5 rounded-2xl border border-white/10 bg-white/5">
+            <p className="text-sm text-gray-400">Plano</p>
+            <p className="text-xl font-bold">{establishment?.subscription_plan || '-'}</p>
+          </div>
+          <div className="p-5 rounded-2xl border border-white/10 bg-white/5">
+            <p className="text-sm text-gray-400">Vencimento</p>
+            <p className="text-xl font-bold">{endDateFormatted}</p>
+            {typeof daysLeft === 'number' && (
+              <p className="text-xs text-gray-400 mt-1">Faltam {daysLeft} dias</p>
+            )}
+          </div>
+          <div className="p-5 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Status</p>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${
+                status === 'active' ? 'bg-green-500/20 text-green-400' :
+                status === 'suspended' ? 'bg-red-500/20 text-red-400' :
+                status === 'cancelled' ? 'bg-gray-500/20 text-gray-300' : 'bg-white/10 text-gray-300'
+              }`}>{status === 'active' ? 'Ativo' : status === 'suspended' ? 'Suspenso' : status === 'cancelled' ? 'Cancelado' : 'Sem assinatura'}</span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setActiveTab('renew'); setPaymentStep('selection'); }} className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white font-bold hover:bg-[#6D28D9]">Renovar</button>
+              <button onClick={() => { setActiveTab('plans'); setPaymentStep('selection'); }} className="px-4 py-2 rounded-lg bg-white/10 text-white font-bold hover:bg-white/20">Trocar Plano</button>
+            </div>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Sidebar */}
