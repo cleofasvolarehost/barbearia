@@ -50,7 +50,7 @@ export function DesktopSidebar({ onViewChange }: DesktopSidebarProps) {
     { id: '/admin/services', icon: Calendar, label: 'Serviços', roles: ['owner'] },
     { id: '/admin/plans', icon: Receipt, label: 'Planos VIP', roles: ['owner'] },
     // Personalizar moved to Minha Barbearia
-    { id: '/admin/subscription', icon: Crown, label: 'Minha Assinatura', roles: ['owner'] },
+    { id: '/dashboard/subscription', icon: Crown, label: 'Minha Assinatura', roles: ['owner'] },
     
     // Super Admin - God Mode
     { id: '/super-admin/dashboard', icon: LayoutDashboard, label: 'Visão Geral', roles: ['super_admin'] },
