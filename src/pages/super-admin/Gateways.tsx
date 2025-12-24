@@ -73,10 +73,14 @@ export default function SuperAdminGateways() {
       const res = await apiFetch('/api/admin/gateways/iugu', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
-      if (json?.success && json.data) {
-        setIuguAccountId(json.data.account_id || '');
-        if (json.data.is_active) setActiveGateway('iugu');
+      const ct = res.headers.get('content-type') || '';
+      const payload = ct.includes('application/json') ? await res.json() : { success: false, mensagem: await res.text() };
+      if (payload?.success && payload.data) {
+        setIuguAccountId(payload.data.account_id || '');
+        if (payload.data.is_active) setActiveGateway('iugu');
+      }
+      if (!res.ok) {
+        toast.error(`Erro (${res.status}) ao carregar Iugu: ${payload.mensagem || 'verifique VITE_BACKEND_URL'}`);
       }
     } catch (e) {
       // noop
@@ -128,11 +132,15 @@ export default function SuperAdminGateways() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
         if (token) {
-          await apiFetch('/api/admin/gateways/activate', {
+          const r = await apiFetch('/api/admin/gateways/activate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ provider: 'iugu' }),
           });
+          if (!r.ok) {
+            const t = await r.text();
+            toast.error(`Falha ao ativar Iugu (${r.status}): ${t}`);
+          }
         }
       }
 
@@ -283,8 +291,9 @@ export default function SuperAdminGateways() {
                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                       body: JSON.stringify({ account_id: iuguAccountId, api_token: iuguToken }),
                     });
-                    const json = await res.json();
-                    if (!json.success) throw new Error(json.mensagem || 'Falha ao salvar Iugu');
+                    const ct = res.headers.get('content-type') || '';
+                    const payload = ct.includes('application/json') ? await res.json() : { success: false, mensagem: await res.text() };
+                    if (!res.ok || !payload.success) throw new Error(payload.mensagem || `Erro (${res.status}) ao salvar Iugu`);
                     toast.success('Credenciais da Iugu salvas com segurança');
                   } catch (e) {
                     console.error(e);

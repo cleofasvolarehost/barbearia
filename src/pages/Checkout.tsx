@@ -217,10 +217,11 @@ export default function Checkout() {
         })
       });
 
-      const result = await response.json();
+      const ct = response.headers.get('content-type') || '';
+      const result = ct.includes('application/json') ? await response.json() : { success: false, mensagem: await response.text() };
 
-      if (!result.success) {
-        throw new Error(result.mensagem || 'Erro ao criar assinatura');
+      if (!response.ok || !result.success) {
+        throw new Error(result.mensagem || `Erro (${response.status}) ao criar assinatura`);
       }
 
       toast.success('Assinatura criada com sucesso!');
