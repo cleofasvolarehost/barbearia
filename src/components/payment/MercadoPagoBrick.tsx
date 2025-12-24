@@ -138,7 +138,8 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
             },
             visual: {
                 style: {
-                    theme: 'default' as const
+                    theme: 'default' as const,
+                    customVariables: {}
                 }
             }
         };
@@ -154,10 +155,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
                 style: {
                     ...defaultCustomization.visual.style,
                     ...customization?.visual?.style,
-                    customVariables: {
-                        ...defaultCustomization.visual.style.customVariables,
-                        ...customization?.visual?.style?.customVariables
-                    }
+                    customVariables: customization?.visual?.style?.customVariables ?? defaultCustomization.visual.style.customVariables
                 }
             }
         };
