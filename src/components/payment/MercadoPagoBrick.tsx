@@ -129,6 +129,42 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
 
         const bricksBuilder = mp.bricks();
 
+        const defaultCustomization = {
+            paymentMethods: {
+                creditCard: 'all',
+                debitCard: 'all',
+                ticket: 'all',
+                bankTransfer: 'all',
+                maxInstallments: 1
+            },
+            visual: {
+                style: {
+                    theme: 'default' // Changed from 'dark' to 'default' to fix 404/400 errors
+                }
+            }
+        };
+
+        const resolvedCustomization = {
+            ...defaultCustomization,
+            ...customization,
+            paymentMethods: {
+                ...defaultCustomization.paymentMethods,
+                ...(customization?.paymentMethods ?? {})
+            },
+            visual: {
+                ...defaultCustomization.visual,
+                ...(customization?.visual ?? {}),
+                style: {
+                    ...defaultCustomization.visual.style,
+                    ...(customization?.visual?.style ?? {}),
+                    customVariables: {
+                        ...(defaultCustomization.visual.style.customVariables ?? {}),
+                        ...(customization?.visual?.style?.customVariables ?? {})
+                    }
+                }
+            }
+        };
+
         const settings = {
             initialization: {
                 amount: Number(finalAmount),
@@ -138,20 +174,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
                     entityType: 'individual'
                 },
             },
-            customization: customization || {
-                paymentMethods: {
-                    creditCard: 'all',
-                    debitCard: 'all',
-                    ticket: 'all',
-                    bankTransfer: 'all',
-                    maxInstallments: 1
-                },
-                visual: {
-                    style: {
-                        theme: 'default' // Changed from 'dark' to 'default' to fix 404/400 errors
-                    }
-                }
-            },
+            customization: resolvedCustomization,
             callbacks: {
                 onReady: () => {
                     console.log('Brick Ready');
