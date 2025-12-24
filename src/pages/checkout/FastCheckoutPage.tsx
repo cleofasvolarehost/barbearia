@@ -5,6 +5,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { createCardToken } from '../../lib/iugu';
+import { createPixPayment } from '../../api/payment';
 import { toast } from 'react-hot-toast';
 
 type PaymentMethod = 'pix' | 'credit';
@@ -149,31 +150,23 @@ export default function FastCheckoutPage() {
   const handleGeneratePix = async () => {
     try {
       setIsProcessing(true);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      const res = await (await import('../../lib/api')).apiFetch('/api/iugu/checkout/pix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({
-          email: (user?.email || formData.email) || 'no-reply@example.com',
-          amount_cents: Math.round(planPrice * 100),
-          items: [{ description: `Assinatura ${plan?.name}`, quantity: 1, price_cents: Math.round(planPrice * 100) }]
-        })
+      const result = await createPixPayment({
+        appointment_data: {
+          price: planPrice,
+          service_name: plan?.name || 'Assinatura',
+          client_name: (user?.email || formData.email || 'Cliente').split('@')[0],
+          client_email: (user?.email || formData.email) || 'no-reply@example.com'
+        },
+        establishment_id: String(establishment?.id || '')
       });
-      const ct = res.headers.get('content-type') || '';
-      const payload = ct.includes('application/json') ? await res.json() : { mensagem: await res.text() };
-      const qrCode = (payload as any)?.data?.pix_qrcode || (payload as any)?.data?.pix?.qrcode;
-      const qrBase64 = (payload as any)?.data?.pix?.qr_code_base64 || '';
-      const ticketUrl = (payload as any)?.data?.ticket_url || '';
-      if (qrCode && (qrBase64 || typeof qrBase64 === 'string')) {
-        setPixData({ qr_code: qrCode, qr_code_base64: qrBase64, ticket_url: ticketUrl });
+      if (result.qr_code && result.qr_code_base64) {
+        setPixData({ qr_code: result.qr_code, qr_code_base64: result.qr_code_base64, ticket_url: undefined });
         toast.success('PIX gerado com sucesso!');
       } else {
         toast.error('Falha ao gerar QR Pix');
       }
     } catch (e: any) {
-      const extra = e?.context?.body ? ` — ${e.context.body}` : '';
-      toast.error((e.message || 'Erro ao gerar PIX') + extra);
+      toast.error(e.message || 'Erro ao gerar PIX');
     } finally {
       setIsProcessing(false);
     }
