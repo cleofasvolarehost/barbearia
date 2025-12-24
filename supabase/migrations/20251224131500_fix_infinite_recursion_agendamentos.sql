@@ -87,14 +87,21 @@ DROP POLICY IF EXISTS "Public can insert appointments" ON public.agendamentos;
 CREATE POLICY "Super Admin full access" ON public.agendamentos
 FOR ALL USING (public.is_super_admin());
 
--- Clients can see and manage their own appointments
-CREATE POLICY "Clients manage own appointments" ON public.agendamentos
-FOR ALL USING (auth.uid() = usuario_id);
+-- Clients can view their own appointments
+CREATE POLICY "Clients view own appointments" ON public.agendamentos
+FOR SELECT USING (auth.uid() = usuario_id);
 
--- Owners can see appointments in their establishments
--- Use the SECURITY DEFINER function to avoid recursion
-CREATE POLICY "Owners see shop appointments" ON public.agendamentos
-FOR SELECT USING (
+-- Clients can create appointments for themselves
+CREATE POLICY "Clients create own appointments" ON public.agendamentos
+FOR INSERT WITH CHECK (auth.uid() = usuario_id);
+
+-- Clients can update their own appointments (for rescheduling)
+CREATE POLICY "Clients update own appointments" ON public.agendamentos
+FOR UPDATE USING (auth.uid() = usuario_id);
+
+-- Owners can view and manage appointments in their establishments
+CREATE POLICY "Owners manage shop appointments" ON public.agendamentos
+FOR ALL USING (
   public.owns_establishment(agendamentos.establishment_id)
 );
 
