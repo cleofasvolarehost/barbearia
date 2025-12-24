@@ -115,6 +115,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
         // DEBUG LOGGING
         console.log("MP Init Status:", publicKey ? "Key Found (" + publicKey.slice(0, 8) + "...)" : "Key Missing");
         console.log("Passing Price to Modal (Final):", finalAmount);
+        console.log("Selected PaymentType:", paymentType);
 
         if (!publicKey) {
              console.warn('⚠️ MP Key missing in Vercel Envs');
