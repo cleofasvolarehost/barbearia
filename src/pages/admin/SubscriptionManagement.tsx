@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useEstablishment } from '../../contexts/EstablishmentContext';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -7,11 +8,19 @@ import { MercadoPagoBrick } from '../../components/payment/MercadoPagoBrick';
 import { TrendingUp, Clock, CreditCard, Check, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function SubscriptionManagementPage() {
-  const { establishment } = useEstablishment();
+  const { establishment, loading: establishmentLoading } = useEstablishment();
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Redirect if no active subscription (User should go to Fast Checkout)
+  useEffect(() => {
+    if (!establishmentLoading && (!establishment || establishment.subscription_status !== 'active')) {
+        navigate('/checkout/start', { replace: true });
+    }
+  }, [establishment, establishmentLoading, navigate]);
   const [activeTab, setActiveTab] = useState<'plans' | 'renew' | 'payment'>('plans');
   
   // Payment State
