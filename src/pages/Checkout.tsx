@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { apiFetch } from '../lib/api';
 import { GlassCard } from '../components/GlassCard';
 import { toast } from 'react-hot-toast';
 import { CreditCard, Lock, User, Calendar, Shield, ArrowLeft, Loader2 } from 'lucide-react';
@@ -201,7 +202,7 @@ export default function Checkout() {
       }
 
       // Criar assinatura via backend
-      const response = await fetch('/api/assinaturas/criar', {
+      const response = await apiFetch('/api/assinaturas/criar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

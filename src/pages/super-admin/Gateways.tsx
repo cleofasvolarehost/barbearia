@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { apiFetch } from '../../lib/api';
 import { GlassCard } from '../../components/GlassCard';
 import { toast } from 'react-hot-toast';
 import { CreditCard, Save, CheckCircle, AlertTriangle, DollarSign } from 'lucide-react';
@@ -69,7 +70,7 @@ export default function SuperAdminGateways() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) return;
-      const res = await fetch('/api/admin/gateways/iugu', {
+      const res = await apiFetch('/api/admin/gateways/iugu', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
@@ -127,7 +128,7 @@ export default function SuperAdminGateways() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
         if (token) {
-          await fetch('/api/admin/gateways/activate', {
+          await apiFetch('/api/admin/gateways/activate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ provider: 'iugu' }),
@@ -277,7 +278,7 @@ export default function SuperAdminGateways() {
                     const { data: sessionData } = await supabase.auth.getSession();
                     const token = sessionData.session?.access_token;
                     if (!token) throw new Error('Sem sessão');
-                    const res = await fetch('/api/admin/gateways/iugu', {
+                    const res = await apiFetch('/api/admin/gateways/iugu', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                       body: JSON.stringify({ account_id: iuguAccountId, api_token: iuguToken }),
