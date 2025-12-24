@@ -35,6 +35,10 @@ export function NewPurchaseModal({ isOpen, onClose, plans, onSuccess }: NewPurch
   };
 
   const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
+    if (amountToPay < 5) {
+      toast.error('Valor mínimo para cartão é R$ 5,00');
+      return;
+    }
     setLoading(true);
     try {
         const response = await fetch('https://vkobtnufnijptgvvxrhq.supabase.co/functions/v1/create-subscription', {

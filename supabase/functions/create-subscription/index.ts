@@ -133,6 +133,10 @@ serve(async (req) => {
     // 4. Create Payment Body
     // USE CUSTOM AMOUNT IF PROVIDED (for Upgrades/Renewals)
     const transactionAmount = custom_amount ? Number(custom_amount) : Number(plan.price);
+    // Enforce min amount for Card in BR (common acquirer restriction)
+    if (payment_method_id !== 'pix' && transactionAmount < 5) {
+        throw new Error('Valor mínimo para cartão é R$ 5,00');
+    }
     
     // Construct payer object
     const payer: any = {

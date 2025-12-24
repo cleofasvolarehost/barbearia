@@ -107,6 +107,10 @@ export default function FastCheckoutPage() {
   };
 
   const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
+    if (selectedMethod === 'credit' && planPrice < 5) {
+      toast.error('Valor mínimo para cartão é R$ 5,00');
+      return;
+    }
     setIsProcessing(true);
     try {
         let response;
