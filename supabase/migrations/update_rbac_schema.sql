@@ -18,9 +18,7 @@ ALTER TABLE public.agendamentos ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Super Admin sees all" ON public.agendamentos;
 CREATE POLICY "Super Admin sees all" ON public.agendamentos
-FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.usuarios WHERE id = auth.uid() AND tipo = 'super_admin')
-);
+FOR ALL USING (public.is_super_admin());
 
 DROP POLICY IF EXISTS "Owner sees all in their shop" ON public.agendamentos;
 CREATE POLICY "Owner sees all in their shop" ON public.agendamentos
@@ -73,6 +71,4 @@ FOR ALL USING (
 -- Super Admin manage establishments
 DROP POLICY IF EXISTS "Super Admin manages establishments" ON public.establishments;
 CREATE POLICY "Super Admin manages establishments" ON public.establishments
-FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.usuarios WHERE id = auth.uid() AND tipo = 'super_admin')
-);
+FOR ALL USING (public.is_super_admin());
