@@ -129,7 +129,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
 
         const bricksBuilder = mp.bricks();
 
-        const defaultCustomization = {
+        const defaultCustomization: NonNullable<MercadoPagoBrickProps['customization']> = {
             paymentMethods: {
                 creditCard: 'all',
                 debitCard: 'all',
