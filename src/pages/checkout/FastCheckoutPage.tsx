@@ -57,7 +57,10 @@ export default function FastCheckoutPage() {
   // Fetch Plan
   useEffect(() => {
     async function fetchPlan() {
-      if (!planId) return;
+      if (!planId) {
+        setLoadingPlan(false);
+        return;
+      }
       try {
         const { data, error } = await supabase
           .from('saas_plans')

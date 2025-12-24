@@ -15,12 +15,14 @@ export default function SubscriptionManagementPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Redirect if no active subscription (User should go to Fast Checkout)
-  useEffect(() => {
-    if (!establishmentLoading && (!establishment || establishment.subscription_status !== 'active')) {
-        navigate('/checkout/start', { replace: true });
-    }
-  }, [establishment, establishmentLoading, navigate]);
+  // Redirect if no active subscription (User should go to Landing Page to pick a plan)
+   useEffect(() => {
+     if (!establishmentLoading && (!establishment || establishment.subscription_status !== 'active')) {
+         // Redirect to Landing Page (#pricing) so they can pick a plan and go to Fast Checkout
+         // Using window.location to ensure full reload/hash navigation if needed, or navigate('/')
+         navigate('/'); 
+     }
+   }, [establishment, establishmentLoading, navigate]);
   const [activeTab, setActiveTab] = useState<'plans' | 'renew' | 'payment'>('plans');
   
   // Payment State
