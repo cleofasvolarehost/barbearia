@@ -35,6 +35,7 @@ export default function FastCheckoutPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [pixData, setPixData] = useState<{ qr_code: string; qr_code_base64: string; ticket_url?: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [recurring, setRecurring] = useState(true);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -115,7 +116,8 @@ export default function FastCheckoutPage() {
                     plan_id: plan?.id,
                     custom_amount: planPrice,
                     type: 'new_subscription',
-                    description: `Assinatura ${plan?.name}`
+                    description: `Assinatura ${plan?.name}`,
+                    recurring: selectedMethod === 'credit' ? recurring : false
                 }
             });
         } else {
@@ -135,7 +137,8 @@ export default function FastCheckoutPage() {
                         phone: formData.phone,
                         password: formData.password
                     },
-                    type: 'new_subscription_fast_track'
+                    type: 'new_subscription_fast_track',
+                    recurring: selectedMethod === 'credit' ? recurring : false
                 }
             });
         }
@@ -449,6 +452,18 @@ export default function FastCheckoutPage() {
                   }
                 }}
               />
+              <div className="mt-4 flex items-center gap-3">
+                <input 
+                  id="recurringToggle"
+                  type="checkbox" 
+                  checked={recurring} 
+                  onChange={(e) => setRecurring(e.target.checked)} 
+                  className="w-5 h-5 rounded-md border border-white/20 bg-white/5"
+                />
+                <label htmlFor="recurringToggle" className="text-sm text-gray-300">
+                  Cobrança automática mensal no cartão
+                </label>
+              </div>
             )}
           </div>
 

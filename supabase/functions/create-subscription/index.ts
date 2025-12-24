@@ -25,7 +25,8 @@ serve(async (req) => {
       installments,
       custom_amount,
       type, // 'upgrade', 'renewal', 'new'
-      description
+      description,
+      recurring
     } = await req.json()
 
     // 1. Strict Validation
@@ -114,19 +115,50 @@ serve(async (req) => {
         paymentBody.issuer_id = issuer_id;
     }
 
-    console.log('Creating Payment via MP API:', JSON.stringify(paymentBody));
+    let data: any = null;
+    let response: Response | null = null;
 
-    const response = await fetch('https://api.mercadopago.com/v1/payments', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mpAccessToken}`,
-            'X-Idempotency-Key': crypto.randomUUID()
-        },
-        body: JSON.stringify(paymentBody)
-    });
+    if (recurring && token && payment_method_id !== 'pix') {
+        // Create Preapproval for recurring card payments
+        const preapprovalBody = {
+            back_url: `${supabaseUrl}/checkout/success`,
+            reason: description || `Assinatura ${plan.name}`,
+            external_reference: `${establishment_id}-${plan_id}`,
+            payer_email: payer_email,
+            card_token_id: token,
+            auto_recurring: {
+                frequency: 1,
+                frequency_type: 'months',
+                transaction_amount: transactionAmount,
+                currency_id: 'BRL'
+            }
+        };
 
-    const data = await response.json();
+        console.log('Creating Preapproval via MP API:', JSON.stringify(preapprovalBody));
+
+        response = await fetch('https://api.mercadopago.com/preapproval', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${mpAccessToken}`,
+                'X-Idempotency-Key': crypto.randomUUID()
+            },
+            body: JSON.stringify(preapprovalBody)
+        });
+        data = await response.json();
+    } else {
+        console.log('Creating Payment via MP API:', JSON.stringify(paymentBody));
+        response = await fetch('https://api.mercadopago.com/v1/payments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${mpAccessToken}`,
+                'X-Idempotency-Key': crypto.randomUUID()
+            },
+            body: JSON.stringify(paymentBody)
+        });
+        data = await response.json();
+    }
     
     // LOG MP RESPONSE
     console.log('MP Response Status:', response.status);
@@ -150,8 +182,8 @@ serve(async (req) => {
     const userId = establishment?.owner_id;
     let subStatus = 'pending';
 
-    // NEW: Handle Immediate Approval (e.g. Credit Card)
-    if (data.status === 'approved') {
+    // NEW: Handle Immediate Approval (e.g. Credit Card) or Preapproval 'authorized'
+    if (data.status === 'approved' || data.status === 'authorized' || data.status === 'active') {
         subStatus = 'active';
         
         console.log('Payment Approved Immediately. Updating Establishment...');
@@ -181,13 +213,13 @@ serve(async (req) => {
             })
             .eq('id', establishment_id);
 
-        // 3. Log Payment
-         await supabase.from('saas_payments').insert({
+        // 3. Log Payment or Preapproval
+        await supabase.from('saas_payments').insert({
             establishment_id,
             amount: transactionAmount,
             status: 'paid',
             payment_method: payment_method_id,
-            invoice_url: data.transaction_details?.external_resource_url 
+            invoice_url: data.transaction_details?.external_resource_url || data.init_point || null 
         });
     }
 
@@ -202,13 +234,7 @@ serve(async (req) => {
             user_id: userId, // Can be null if not found, but schema says NOT NULL?
             plan_id: plan_id,
             status: subStatus,
-            mp_payment_id: data.id.toString(),
-            // mp_subscription_id? This is a one-off payment for subscription or recurring?
-            // The user says "subscriptions no SaaS". Usually implies recurring. 
-            // But MP "payments" API is for single payments. 
-            // If they want recurring, they should use /preapproval. 
-            // BUT the user specifically asked for "/v1/payments" (single payment) and "QR Code".
-            // So this is likely a manual monthly payment via Pix.
+            mp_payment_id: String(data.id),
         })
         .select()
         .single();
