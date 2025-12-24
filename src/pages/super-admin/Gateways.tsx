@@ -75,7 +75,7 @@ export default function SuperAdminGateways() {
       });
       const ct = res.headers.get('content-type') || '';
       const payload = ct.includes('application/json') ? await res.json() : { success: false, mensagem: await res.text() };
-      if (payload?.success && payload.data) {
+      if ((payload?.success || payload?.ok) && payload.data) {
         setIuguAccountId(payload.data.account_id || '');
         if (payload.data.is_active) setActiveGateway('iugu');
       }
@@ -292,8 +292,11 @@ export default function SuperAdminGateways() {
                       body: JSON.stringify({ account_id: iuguAccountId, api_token: iuguToken }),
                     });
                     const ct = res.headers.get('content-type') || '';
-                    const payload = ct.includes('application/json') ? await res.json() : { success: false, mensagem: await res.text() };
-                    if (!res.ok || !payload.success) throw new Error(payload.mensagem || `Erro (${res.status}) ao salvar Iugu`);
+                    if (!ct.toLowerCase().includes('application/json')) {
+                      throw new Error(`Resposta inesperada do backend (content-type: ${ct || 'desconhecido'}). Verifique VITE_BACKEND_URL`);
+                    }
+                    const payload = await res.json();
+                    if (!res.ok || !(payload?.success || payload?.ok)) throw new Error(payload?.mensagem || `Erro (${res.status}) ao salvar Iugu`);
                     toast.success('Credenciais da Iugu salvas com segurança');
                   } catch (e) {
                     console.error(e);
