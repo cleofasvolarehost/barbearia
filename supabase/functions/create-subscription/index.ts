@@ -13,6 +13,11 @@ serve(async (req) => {
   }
 
   try {
+    // Initialize Supabase with Service Role Key (Bypass RLS)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const { 
       token, 
       payer_email, 
@@ -79,11 +84,6 @@ serve(async (req) => {
     if (!resolvedEstablishmentId) {
         throw new Error('Missing establishment_id');
     }
-
-    // Initialize Supabase with Service Role Key (Bypass RLS)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log('Fetching Plan:', plan_id);
 
@@ -165,7 +165,7 @@ serve(async (req) => {
         currency_id: 'BRL',
         metadata: {
             type: type || 'saas_subscription', 
-            establishment_id: establishment_id,
+            establishment_id: resolvedEstablishmentId,
             plan_id: plan_id,
             plan_name: plan.name
         },
