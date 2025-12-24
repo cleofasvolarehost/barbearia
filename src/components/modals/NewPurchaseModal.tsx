@@ -217,6 +217,7 @@ export function NewPurchaseModal({ isOpen, onClose, plans, onSuccess }: NewPurch
                              <MercadoPagoBrick 
                                 amount={amountToPay}
                                 email={user?.email || ''}
+                                paymentType={'credit_card'}
                                 onSuccess={handleBrickSuccess}
                                 onError={(err) => toast.error('Erro no pagamento')}
                                 customization={{

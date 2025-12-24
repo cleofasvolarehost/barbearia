@@ -105,6 +105,7 @@ export function PaymentRetryModal({ isOpen, onClose, onSuccess, plans }: Payment
             <MercadoPagoBrick 
                 amount={amountToPay}
                 email={user?.email || ''}
+                paymentType={'credit_card'}
                 onSuccess={handleBrickSuccess}
                 onError={(err) => toast.error('Erro no pagamento')}
                 customization={{

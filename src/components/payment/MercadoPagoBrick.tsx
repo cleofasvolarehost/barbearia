@@ -10,6 +10,7 @@ interface MercadoPagoBrickProps {
   amount: number;
   email: string;
   publicKey?: string;
+  paymentType?: 'credit_card' | 'debit_card' | 'pix' | 'ticket' | 'bank_transfer';
   onSuccess: (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => Promise<void> | void;
   onError: (error: any) => void;
   customization?: {
@@ -41,7 +42,7 @@ interface MercadoPagoBrickProps {
   };
 }
 
-export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSuccess, onError, customization }: MercadoPagoBrickProps) {
+export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paymentType = 'credit_card', onSuccess, onError, customization }: MercadoPagoBrickProps) {
   const brickInitialized = useRef(false);
   const [initError, setInitError] = useState<string | null>(null);
 
@@ -131,6 +132,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
         const settings = {
             initialization: {
                 amount: Number(finalAmount),
+                paymentType,
                 payer: {
                     email: email,
                     entityType: 'individual'

@@ -433,6 +433,7 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                         key={selectedMethod} // FORCE RE-RENDER on method change
                                         amount={Number(plan.price)} 
                                         email={user?.email || ''}
+                                        paymentType={selectedMethod === 'pix' ? 'pix' : selectedMethod === 'credit' ? 'credit_card' : 'ticket'}
                                         onSuccess={handleBrickSuccess}
                                         onError={handleBrickError}
                                         customization={{
