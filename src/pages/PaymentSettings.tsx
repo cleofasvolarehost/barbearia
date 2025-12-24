@@ -37,9 +37,9 @@ export default function PaymentSettings() {
       const { error } = await supabase
         .from('establishments')
         .update({
-          manual_pix_key: formData.manual_pix_key,
-          mp_access_token: formData.mp_access_token,
-          mp_public_key: formData.mp_public_key,
+          manual_pix_key: formData.manual_pix_key.trim(),
+          mp_access_token: formData.mp_access_token.trim(),
+          mp_public_key: formData.mp_public_key.trim(),
           allow_pay_at_shop: formData.allow_pay_at_shop,
           payment_mode: formData.payment_mode
         })
