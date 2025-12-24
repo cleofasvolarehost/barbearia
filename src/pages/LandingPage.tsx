@@ -30,18 +30,29 @@ export default function LandingPage() {
   const [dbPlans, setDbPlans] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch plans from DB to get real IDs
     supabase
-      .from('saas_plans')
-      .select('*')
-      .order('price')
+      .from('plans')
+      .select('id, nome, descricao, preco, intervalo, beneficios, ativo')
+      .eq('ativo', true)
+      .order('preco', { ascending: true })
       .then(({ data }) => {
-        if (data) setDbPlans(data);
+        if (data) {
+          const normalized = data.map((p: any) => ({
+            id: p.id,
+            name: p.nome,
+            description: p.descricao,
+            price: p.preco,
+            interval_days: p.intervalo === 'yearly' ? 365 : 30,
+            features: Array.isArray(p.beneficios) ? p.beneficios : [],
+            highlighted: false,
+          }));
+          setDbPlans(normalized);
+        }
       });
   }, []);
 
   const handleBuyPlan = (planId: string) => {
-      navigate(`/checkout/start?plan=${planId}`);
+      navigate(`/checkout/${planId}`);
   };
 
   const onEnterApp = () => {
