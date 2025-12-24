@@ -9,18 +9,21 @@ import { toast } from 'react-hot-toast';
 
 type PaymentMethod = 'pix' | 'credit';
 
+import { useEstablishment } from '../../contexts/EstablishmentContext';
+
 export default function FastCheckoutPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { establishment } = useEstablishment();
   
-  // Guard: Redirect logged-in users to management hub
+  // Guard: Redirect ONLY if logged in AND has active subscription
   useEffect(() => {
-    if (user) {
-        // Prevent duplicate subscriptions or confusion
+    if (user && establishment?.subscription_status === 'active') {
+        // Already has active sub -> Go to management
         navigate('/dashboard/subscription', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, establishment, navigate]);
   
   const planId = searchParams.get('plan');
   
@@ -91,28 +94,48 @@ export default function FastCheckoutPage() {
   const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
     setIsProcessing(true);
     try {
-        // 1. Prepare Payload
-        const payload = {
-            token,
-            issuer_id,
-            payment_method_id,
-            card_holder_name,
-            identification,
-            payer_email: formData.email,
-            plan_id: plan?.id,
-            user_data: !user ? {
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-                password: formData.password
-            } : undefined,
-            type: 'new_subscription_fast_track'
-        };
+        let response;
+        
+        if (user) {
+            // Existing User Flow (Create Subscription / Reactivate)
+            response = await supabase.functions.invoke('create-subscription', {
+                body: {
+                    token,
+                    issuer_id,
+                    payment_method_id,
+                    card_holder_name,
+                    identification,
+                    payer_email: user.email,
+                    establishment_id: establishment?.id, // Might be null if user has account but no establishment yet
+                    plan_id: plan?.id,
+                    custom_amount: planPrice,
+                    type: 'new_subscription',
+                    description: `Assinatura ${plan?.name}`
+                }
+            });
+        } else {
+            // New Guest Flow (Acquire Customer)
+            response = await supabase.functions.invoke('acquire-customer', {
+                body: {
+                    token,
+                    issuer_id,
+                    payment_method_id,
+                    card_holder_name,
+                    identification,
+                    payer_email: formData.email,
+                    plan_id: plan?.id,
+                    user_data: {
+                        name: formData.name,
+                        email: formData.email,
+                        phone: formData.phone,
+                        password: formData.password
+                    },
+                    type: 'new_subscription_fast_track'
+                }
+            });
+        }
 
-        // 2. Call Edge Function (Atomic Transaction)
-        const { data, error } = await supabase.functions.invoke('acquire-customer', {
-            body: payload
-        });
+        const { data, error } = response;
 
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -120,14 +143,13 @@ export default function FastCheckoutPage() {
         // 3. Success Flow
         setShowSuccess(true);
         setTimeout(() => {
-            if (data?.temp_password) {
-                // New user flow
-                toast.success(`Conta criada! Senha temporária enviada para o email.`);
-                navigate('/setup/welcome'); // Redirect to welcome/setup page
-            } else {
-                // Fallback (should be caught by Guard above if logged in, but for safety)
-                navigate('/setup/welcome');
-            }
+             // If user was already logged in, go to setup/dashboard
+             // If new user, go to welcome
+             if (user) {
+                 navigate('/admin/dashboard'); 
+             } else {
+                 navigate('/setup/welcome');
+             }
         }, 3000);
 
     } catch (error: any) {
@@ -239,8 +261,8 @@ export default function FastCheckoutPage() {
           </div>
         </motion.div>
 
-        {/* FAST INPUTS (The Form) - Only show if NOT logged in */}
-        {!user && (
+        {/* FAST INPUTS (The Form) */}
+        {!user ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -299,6 +321,23 @@ export default function FastCheckoutPage() {
               </div>
             </div>
           </motion.div>
+        ) : (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8 bg-[#1A1A1A] p-6 rounded-2xl border border-white/10"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#6D28D9] flex items-center justify-center font-bold text-xl">
+                        {user.email?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-400">Logado como</p>
+                        <p className="font-bold text-white text-lg">{user.user_metadata?.name || user.email}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                </div>
+            </motion.div>
         )}
 
         {/* PAYMENT SELECTOR */}
