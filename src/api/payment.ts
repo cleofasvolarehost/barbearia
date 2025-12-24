@@ -21,16 +21,32 @@ interface CreatePixPaymentResponse {
 export async function createPixPayment(params: CreatePixPaymentParams): Promise<CreatePixPaymentResponse> {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
-  const res = await apiFetch('/api/iugu/checkout/pix', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ amount_cents: Math.round(params.appointment_data.price * 100), email: params.appointment_data.client_email || 'no-reply@example.com' }),
-  });
-  const ct = res.headers.get('content-type') || '';
-  const payload = ct.includes('application/json') ? await res.json() : { error: await res.text() };
-  if (!res.ok || (payload as any).error) {
-    throw new Error((payload as any).error || `Erro (${res.status}) ao gerar Pix`);
+  try {
+    const res = await apiFetch('/api/iugu/checkout/pix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ amount_cents: Math.round(params.appointment_data.price * 100), email: params.appointment_data.client_email || 'no-reply@example.com' }),
+    });
+    const ct = res.headers.get('content-type') || '';
+    const payload = ct.includes('application/json') ? await res.json() : { error: await res.text() };
+    if (!res.ok || (payload as any).error) throw new Error((payload as any).error || `Erro (${res.status}) ao gerar Pix`);
+    const data = (payload as any).data || payload || {};
+    const qrCode = data?.pix?.qrcode || data?.pix_qrcode || data?.qr_code || '';
+    const qrBase64 = data?.pix?.qr_code_base64 || data?.qr_code_base64 || '';
+    return { qr_code: qrCode, qr_code_base64: qrBase64, payment_id: Date.now(), status: data?.status || 'pending' };
+  } catch (err) {
+    const { data, error } = await supabase.functions.invoke('create-pix', {
+      body: {
+        appointment_data: params.appointment_data,
+        establishment_id: params.establishment_id,
+      },
+    });
+    if (error) throw new Error(error.message || 'Erro ao gerar Pix (fallback)');
+    return {
+      qr_code: (data as any)?.qr_code || '',
+      qr_code_base64: (data as any)?.qr_code_base64 || '',
+      payment_id: (data as any)?.payment_id || Date.now(),
+      status: (data as any)?.status || 'pending',
+    };
   }
-  const data = (payload as any).data || {};
-  return { qr_code: data?.pix?.qrcode || data?.pix_qrcode || '', qr_code_base64: data?.pix?.qr_code_base64 || '', payment_id: Date.now(), status: 'pending' };
 }

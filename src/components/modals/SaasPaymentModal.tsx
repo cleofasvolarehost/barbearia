@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { apiFetch } from '../../lib/api';
+import { createPixPayment } from '../../api/payment';
 import { createCardToken } from '../../lib/iugu';
 import { X, Copy, Check, Loader2, CreditCard, Barcode, Crown, ShieldCheck, Lock, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -458,27 +459,17 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                                                     onClick={async () => {
                                                         try {
                                                             setLoading(true);
-                                                            const { data: sessionData } = await (await import('../../lib/supabase')).supabase.auth.getSession();
-                                                            const token = sessionData.session?.access_token;
-                                                            const response = await (await import('../../lib/api')).apiFetch('/api/iugu/checkout/pix', {
-                                                                method: 'POST',
-                                                                headers: {
-                                                                    'Content-Type': 'application/json',
-                                                                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                                                            const result = await createPixPayment({
+                                                                appointment_data: {
+                                                                    price: Number(plan.price),
+                                                                    service_name: plan.name,
+                                                                    client_name: (user?.email || 'Cliente').split('@')[0],
+                                                                    client_email: user?.email || 'no-reply@example.com'
                                                                 },
-                                                                body: JSON.stringify({
-                                                                    email: user?.email || 'no-reply@example.com',
-                                                                    amount_cents: Math.round(Number(plan.price) * 100),
-                                                                    items: [{ description: `Assinatura ${plan.name}`, quantity: 1, price_cents: Math.round(Number(plan.price) * 100) }]
-                                                                })
+                                                                establishment_id: String(establishment?.id || '')
                                                             });
-                                                            const ct = response.headers.get('content-type') || '';
-                                                            const data = ct.includes('application/json') ? await response.json() : { success: false, mensagem: await response.text() };
-                                                            const qrCode = data.qr_code || data.point_of_interaction?.transaction_data?.qr_code;
-                                                            const qrBase64 = data.qr_code_base64 || data.point_of_interaction?.transaction_data?.qr_code_base64;
-                                                            const ticketUrl = data.ticket_url || data.point_of_interaction?.transaction_data?.ticket_url;
-                                                            if (qrCode && qrBase64) {
-                                                                setPixData({ qr_code: qrCode, qr_code_base64: qrBase64, ticket_url: ticketUrl });
+                                                            if (result.qr_code && result.qr_code_base64) {
+                                                                setPixData({ qr_code: result.qr_code, qr_code_base64: result.qr_code_base64 });
                                                                 toast.success('PIX gerado com sucesso!');
                                                             } else {
                                                                 toast.error('Falha ao gerar QR Pix');
