@@ -248,7 +248,7 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
             <div className="h-10 bg-white/10 rounded mt-3"></div>
           </div>
         )}
-        <div id="paymentBrick_container"></div>
+        <div id="paymentBrick_container" style={{ minHeight: 380 }}></div>
     </div>
   );
 }

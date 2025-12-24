@@ -225,7 +225,7 @@ export function NewPurchaseModal({ isOpen, onClose, plans, onSuccess }: NewPurch
                                 }}
                                 customization={{
                                     visual: {
-                                        style: { theme: 'dark' },
+                                        style: { theme: 'default' },
                                         hidePaymentButton: false
                                     }
                                 }}

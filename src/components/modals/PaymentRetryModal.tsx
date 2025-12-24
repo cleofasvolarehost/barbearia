@@ -113,7 +113,7 @@ export function PaymentRetryModal({ isOpen, onClose, onSuccess, plans }: Payment
                 }}
                 customization={{
                     visual: {
-                        style: { theme: 'dark' },
+                        style: { theme: 'default' },
                         hidePaymentButton: false
                     }
                 }}

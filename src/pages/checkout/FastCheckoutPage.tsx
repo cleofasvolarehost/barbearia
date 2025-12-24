@@ -483,7 +483,7 @@ export default function FastCheckoutPage() {
                   }}
                   customization={{
                     visual: {
-                       style: { theme: 'dark' },
+                       style: { theme: 'default' },
                       hidePaymentButton: false
                     }
                   }}
