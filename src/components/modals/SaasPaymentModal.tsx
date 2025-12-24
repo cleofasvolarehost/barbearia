@@ -8,8 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useEstablishment } from '../../contexts/EstablishmentContext';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { supabase } from '../../lib/supabase';
-import { apiFetch } from '../../lib/api';
+ 
 interface SaasPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
