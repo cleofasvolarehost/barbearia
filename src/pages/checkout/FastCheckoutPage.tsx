@@ -465,6 +465,12 @@ export default function FastCheckoutPage() {
                           {copied ? 'Copiado!' : 'Copiar'}
                         </button>
                       </div>
+                      <div className="text-[11px] text-gray-500 space-y-1">
+                        <p>Use a opção <span className="font-bold text-white">Pix Copia e Cola</span> no seu banco. Não cole na opção "Chave Pix".</p>
+                        {pixData.ticket_url && (
+                          <a href={pixData.ticket_url} target="_blank" className="inline-block mt-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white">Abrir link do pagamento</a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
