@@ -14,6 +14,7 @@ export default function SubscriptionManagementPage() {
   
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [canceling, setCanceling] = useState(false);
   
   // Payment State
   const [paymentStep, setPaymentStep] = useState<'selection' | 'checkout'>('selection');
@@ -146,6 +147,25 @@ export default function SubscriptionManagementPage() {
   const daysLeft = endDate ? Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : null;
   const status = establishment?.subscription_status || 'none';
 
+  const handleCancelSubscription = async () => {
+    if (!establishment?.id) return;
+    const ok = window.confirm('Tem certeza que deseja cancelar a assinatura?');
+    if (!ok) return;
+    setCanceling(true);
+    try {
+      const { error } = await supabase.functions.invoke('manage-subscription', {
+        body: { action: 'cancel', establishment_id: establishment.id },
+      });
+      if (error) throw error;
+      toast.success('Assinatura cancelada com sucesso');
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(`Erro ao cancelar: ${err.message || 'tente novamente'}`);
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   const handleSelectPlan = (plan: any) => {
     const planPrice = Number(plan.price);
     
@@ -240,6 +260,15 @@ export default function SubscriptionManagementPage() {
             <div className="flex gap-2">
               <button onClick={() => { setActiveTab('renew'); setPaymentStep('selection'); }} className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white font-bold hover:bg-[#6D28D9]">Renovar</button>
               <button onClick={() => { setActiveTab('plans'); setPaymentStep('selection'); }} className="px-4 py-2 rounded-lg bg-white/10 text-white font-bold hover:bg-white/20">Trocar Plano</button>
+              {status === 'active' && (
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={canceling}
+                  className={`px-4 py-2 rounded-lg font-bold ${canceling ? 'bg-red-500/10 text-red-300 cursor-not-allowed' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
+                >
+                  {canceling ? 'Cancelando...' : 'Cancelar'}
+                </button>
+              )}
             </div>
           </div>
         </div>
