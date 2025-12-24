@@ -144,11 +144,31 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
             }
         };
 
+        const mergedPaymentMethods = {
+            ...defaultCustomization.paymentMethods,
+            ...customization?.paymentMethods
+        };
+
+        const sanitizedPaymentMethods = Object.fromEntries(
+            Object.entries(mergedPaymentMethods).filter(([key, value]) => {
+                if (key === 'maxInstallments') {
+                    return value !== undefined && value !== null;
+                }
+
+                if (Array.isArray(value)) {
+                    return value.length > 0;
+                }
+
+                return Boolean(value);
+            })
+        ) as typeof mergedPaymentMethods;
+
+        const hasSelectedMethod = ['creditCard', 'debitCard', 'ticket', 'bankTransfer'].some(
+            (method) => Boolean(sanitizedPaymentMethods[method as keyof typeof sanitizedPaymentMethods])
+        );
+
         const customizationConfig = {
-            paymentMethods: {
-                ...defaultCustomization.paymentMethods,
-                ...customization?.paymentMethods
-            },
+            paymentMethods: hasSelectedMethod ? sanitizedPaymentMethods : defaultCustomization.paymentMethods,
             visual: {
                 ...defaultCustomization.visual,
                 ...customization?.visual,
