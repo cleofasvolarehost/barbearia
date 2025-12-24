@@ -212,6 +212,36 @@ export default function FastCheckoutPage() {
     }
   };
   
+  const validatePixCopiaCola = (code: string) => {
+    try {
+      if (!code || typeof code !== 'string') return false;
+      const trimmed = code.trim();
+      const idx = trimmed.indexOf('6304');
+      if (idx === -1 || trimmed.length < idx + 8) return false;
+      const payload = trimmed.substring(0, idx + 4); // include '6304'
+      const crcProvided = trimmed.substring(idx + 4, idx + 8).toUpperCase();
+      const crcCalc = (() => {
+        let crc = 0xFFFF;
+        const poly = 0x1021;
+        for (let i = 0; i < payload.length; i++) {
+          crc ^= (payload.charCodeAt(i) << 8);
+          for (let j = 0; j < 8; j++) {
+            if (crc & 0x8000) {
+              crc = (crc << 1) ^ poly;
+            } else {
+              crc <<= 1;
+            }
+            crc &= 0xFFFF;
+          }
+        }
+        return crc.toString(16).toUpperCase().padStart(4, '0');
+      })();
+      return crcCalc === crcProvided;
+    } catch {
+      return false;
+    }
+  };
+
   const handleCopyPix = () => {
     if (!pixData?.qr_code) return;
     navigator.clipboard.writeText(pixData.qr_code);
@@ -464,6 +494,13 @@ export default function FastCheckoutPage() {
                         >
                           {copied ? 'Copiado!' : 'Copiar'}
                         </button>
+                      </div>
+                      <div className="mt-2 text-[11px]">
+                        {pixData.qr_code && (
+                          <span className={validatePixCopiaCola(pixData.qr_code) ? 'text-[#10B981]' : 'text-red-400'}>
+                            {validatePixCopiaCola(pixData.qr_code) ? 'Código PIX válido' : 'Código PIX inválido — gere novamente'}
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] text-gray-500 space-y-1">
                         <p>Use a opção <span className="font-bold text-white">Pix Copia e Cola</span> no seu banco. Não cole na opção "Chave Pix".</p>
