@@ -199,7 +199,7 @@ export default function SubscriptionManagementPage() {
   const handleBrickSuccess = async (token: string | undefined, issuer_id?: string, payment_method_id?: string, card_holder_name?: string, identification?: any) => {
     setLoading(true);
     try {
-        const { error } = await supabase.functions.invoke('create-subscription', {
+        const { data, error } = await supabase.functions.invoke('create-subscription', {
             body: {
                 token,
                 payer_email: user?.email,
@@ -220,6 +220,7 @@ export default function SubscriptionManagementPage() {
         });
 
         if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
         toast.success('Pagamento realizado com sucesso!');
         window.location.reload(); // Refresh state
     } catch (error: any) {

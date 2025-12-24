@@ -57,20 +57,31 @@ serve(async (req) => {
 
     // 3. Get MP Access Token (Securely)
     let mpAccessToken = '';
-    const { data: saasSettings } = await supabase
-        .from('saas_settings')
-        .select('setting_value')
-        .eq('setting_key', 'mp_access_token')
-        .single();
-    
-    if (saasSettings?.setting_value && saasSettings.setting_value.length > 20) {
-        mpAccessToken = saasSettings.setting_value;
+    // Prefer establishment-level credential
+    const { data: estCreds } = await supabase
+        .from('establishments')
+        .select('mp_access_token')
+        .eq('id', establishment_id)
+        .maybeSingle();
+
+    if (estCreds?.mp_access_token && estCreds.mp_access_token.length > 20) {
+        mpAccessToken = estCreds.mp_access_token;
     } else {
-        mpAccessToken = Deno.env.get('SAAS_MP_ACCESS_TOKEN') || Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN') || '';
+        // Fallback to global setting
+        const { data: saasSettings } = await supabase
+            .from('saas_settings')
+            .select('setting_value')
+            .eq('setting_key', 'mp_access_token')
+            .single();
+        if (saasSettings?.setting_value && saasSettings.setting_value.length > 20) {
+            mpAccessToken = saasSettings.setting_value;
+        } else {
+            mpAccessToken = Deno.env.get('SAAS_MP_ACCESS_TOKEN') || Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN') || '';
+        }
     }
 
     if (!mpAccessToken) {
-        throw new Error('Server Config Error: Missing MP Access Token');
+        throw new Error('Server Config Error: Missing MP Access Token (establishment or global)');
     }
 
     // 4. Create Payment Body

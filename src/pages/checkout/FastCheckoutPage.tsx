@@ -477,10 +477,13 @@ export default function FastCheckoutPage() {
                   email={formData.email}
                   paymentType={'credit_card'}
                   onSuccess={handleBrickSuccess}
-                  onError={(err) => toast.error('Erro no pagamento')}
+                  onError={(err) => {
+                    const msg = typeof err === 'string' ? err : (err?.message || 'Erro no pagamento');
+                    toast.error(msg);
+                  }}
                   customization={{
                     visual: {
-                      style: { theme: 'dark' },
+                       style: { theme: 'dark' },
                       hidePaymentButton: false
                     }
                   }}
