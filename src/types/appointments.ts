@@ -48,6 +48,7 @@ export interface CreateAppointmentPayload {
 }
 
 export interface AppointmentFilters {
+  barbershop_id?: string;
   dateRange?: { start: string; end: string }; // ISO dates
   status?: AppointmentStatus;
   barber_id?: string;

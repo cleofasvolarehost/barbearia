@@ -23,6 +23,7 @@ export default function AdminAppointmentsPage() {
   
   // Filters & Pagination
   const [filters, setFilters] = useState<AppointmentFilters>({
+    barbershop_id: establishment?.id,
     dateRange: { 
       start: startOfDay(new Date()).toISOString(), 
       end: endOfDay(new Date()).toISOString() 
@@ -41,6 +42,15 @@ export default function AdminAppointmentsPage() {
       fetchAppointments();
     }
   }, [establishment?.id, filters]);
+
+  useEffect(() => {
+    if (!establishment?.id) return;
+    setFilters(prev => (
+      prev.barbershop_id === establishment.id
+        ? prev
+        : { ...prev, barbershop_id: establishment.id, page: 1 }
+    ));
+  }, [establishment?.id]);
 
   const fetchAppointments = async () => {
     setLoading(true);
