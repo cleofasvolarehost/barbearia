@@ -404,6 +404,28 @@ export default function FastCheckoutPage() {
           */}
           
           <div className="bg-[#1E1E1E] p-4 rounded-3xl border border-white/10">
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => setSelectedMethod('pix')}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  selectedMethod === 'pix'
+                    ? 'bg-[#10B981] text-black shadow-lg shadow-[#10B981]/30'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                Pix
+              </button>
+              <button
+                onClick={() => setSelectedMethod('credit')}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  selectedMethod === 'credit'
+                    ? 'bg-[#7C3AED] text-white shadow-lg shadow-[#7C3AED]/30'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                Cartão de Crédito
+              </button>
+            </div>
             {selectedMethod === 'pix' ? (
               <div className="space-y-4">
                 {!pixData ? (
