@@ -167,21 +167,19 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, paym
                     console.log('Brick Ready');
                     setLoading(false);
                 },
-                onSubmit: ({ selectedPaymentMethod, formData }: any) => {
-                    // Extract data needed for subscription
-                    // formData contains token, issuer_id, payment_method_id, etc.
+                onSubmit: (args: any) => {
+                    // CardPayment Brick passes formData directly; Payment Brick wraps in { formData }
+                    const fd = args?.formData ?? args;
                     return new Promise<void>(async (resolve, reject) => {
-                        console.log('Brick Submit:', formData);
-                        // Allow submission if we have a token OR if it's a non-card method (Pix/Ticket)
-                        // For Pix/Ticket, token is undefined, but payment_method_id is present.
-                        if (formData.token || formData.payment_method_id) {
+                        console.log('Brick Submit:', fd);
+                        if (fd?.token || fd?.payment_method_id) {
                             try {
                                 await onSuccess(
-                                    formData.token, 
-                                    formData.issuer_id, 
-                                    formData.payment_method_id,
-                                    formData.card?.cardholder?.name,
-                                    formData.payer?.identification
+                                    fd.token, 
+                                    fd.issuer_id, 
+                                    fd.payment_method_id,
+                                    fd.card?.cardholder?.name,
+                                    fd.payer?.identification
                                 );
                                 resolve();
                             } catch (e) {
