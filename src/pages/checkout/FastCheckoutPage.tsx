@@ -15,13 +15,12 @@ export default function FastCheckoutPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { establishment } = useEstablishment();
+  const { establishment, refreshEstablishment } = useEstablishment();
   
-  // Guard: Redirect ONLY if logged in AND has active subscription
+  // Guard: If already active, go straight to admin dashboard
   useEffect(() => {
     if (user && establishment?.subscription_status === 'active') {
-        // Already has active sub -> Go to management
-        navigate('/dashboard/subscription', { replace: true });
+        navigate('/admin/dashboard', { replace: true });
     }
   }, [user, establishment, navigate]);
   
@@ -160,15 +159,16 @@ export default function FastCheckoutPage() {
 
         // 3. Success Flow
         setShowSuccess(true);
+        try {
+          await refreshEstablishment();
+        } catch {}
         setTimeout(() => {
-             // If user was already logged in, go to setup/dashboard
-             // If new user, go to welcome
-             if (user) {
-                 navigate('/admin/dashboard'); 
-             } else {
-                 navigate('/setup/welcome');
-             }
-        }, 3000);
+          if (user) {
+            navigate('/admin/dashboard', { replace: true });
+          } else {
+            navigate('/setup/welcome', { replace: true });
+          }
+        }, 1500);
 
     } catch (error: any) {
         console.error('Checkout Error:', error);
