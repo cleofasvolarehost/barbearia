@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { apiFetch } from '../lib/api';
 
 interface CreatePixPaymentParams {
   appointment_data: {
@@ -18,17 +19,17 @@ interface CreatePixPaymentResponse {
 }
 
 export async function createPixPayment(params: CreatePixPaymentParams): Promise<CreatePixPaymentResponse> {
-  const { data, error } = await supabase.functions.invoke('create-pix', {
-    body: params
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  const res = await apiFetch('/api/payment/pix/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(params),
   });
-
-  if (error) {
-    throw new Error(error.message || 'Erro ao conectar com servidor de pagamento');
+  const ct = res.headers.get('content-type') || '';
+  const payload = ct.includes('application/json') ? await res.json() : { error: await res.text() };
+  if (!res.ok || (payload as any).error) {
+    throw new Error((payload as any).error || `Erro (${res.status}) ao gerar Pix`);
   }
-
-  if (data.error) {
-    throw new Error(data.error);
-  }
-
-  return data;
+  return payload as CreatePixPaymentResponse;
 }
