@@ -88,7 +88,9 @@ export function SaasPaymentModal({ isOpen, onClose, plan, onSuccess }: SaasPayme
                 issuer_id,
                 payment_method_id,
                 card_holder_name,
-                identification
+                identification,
+                recurring: payment_method_id !== 'pix',
+                description: `Assinatura ${plan.name}`
             })
         });
 

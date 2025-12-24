@@ -24,6 +24,7 @@ serve(async (req) => {
       card_holder_name,
       installments,
       custom_amount,
+      days_to_add,
       type, // 'upgrade', 'renewal', 'new'
       description,
       recurring

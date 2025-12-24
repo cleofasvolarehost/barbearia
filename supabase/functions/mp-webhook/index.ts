@@ -37,8 +37,83 @@ serve(async (req) => {
         }
     }
 
+    // Handle Preapproval (Subscriptions) Notifications
+    if (bodyTopic === 'preapproval' || bodyTopic === 'subscription_preapproval') {
+        if (!bodyId) return new Response('Missing Preapproval ID', { status: 400 });
+
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        let mpAccessToken = '';
+        const { data: saasSettings } = await supabase
+            .from('saas_settings')
+            .select('setting_value')
+            .eq('setting_key', 'mp_access_token')
+            .single();
+        if (saasSettings?.setting_value) mpAccessToken = saasSettings.setting_value;
+        else mpAccessToken = Deno.env.get('SAAS_MP_ACCESS_TOKEN') || Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN') || '';
+        if (!mpAccessToken) return new Response('Config Error', { status: 500 });
+
+        const preRes = await fetch(`https://api.mercadopago.com/preapproval/${bodyId}`, {
+            headers: { 'Authorization': `Bearer ${mpAccessToken}` }
+        });
+        if (!preRes.ok) return new Response('MP Preapproval Fetch Error', { status: 500 });
+        const pre = await preRes.json();
+
+        const externalReference: string | undefined = pre.external_reference;
+        let establishment_id: string | undefined;
+        let plan_id: string | undefined;
+        if (externalReference && externalReference.includes('-')) {
+            const parts = externalReference.split('-');
+            establishment_id = parts[0];
+            plan_id = parts[1];
+        }
+
+        // Update subscription status based on preapproval
+        const status = pre.status; // authorized, paused, cancelled
+        if (status === 'authorized' || status === 'active') {
+            await supabase
+                .from('subscriptions')
+                .update({ status: 'active', updated_at: new Date().toISOString() })
+                .eq('mp_payment_id', String(bodyId));
+
+            if (establishment_id && plan_id) {
+                const { data: plan } = await supabase
+                    .from('saas_plans')
+                    .select('*')
+                    .eq('id', plan_id)
+                    .single();
+                const daysToAdd = plan?.days_valid || 30;
+                const finalPlanName = plan?.name || 'Pro';
+                const { data: establishment } = await supabase
+                    .from('establishments')
+                    .select('subscription_end_date')
+                    .eq('id', establishment_id)
+                    .single();
+                let newEndDate = new Date();
+                const currentEndDate = establishment?.subscription_end_date ? new Date(establishment.subscription_end_date) : null;
+                if (currentEndDate && currentEndDate > new Date()) {
+                    newEndDate = new Date(currentEndDate.getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
+                } else {
+                    newEndDate = new Date(new Date().getTime() + (daysToAdd * 24 * 60 * 60 * 1000));
+                }
+                await supabase
+                    .from('establishments')
+                    .update({ subscription_status: 'active', subscription_plan: finalPlanName, subscription_end_date: newEndDate.toISOString() })
+                    .eq('id', establishment_id);
+            }
+        } else if (status === 'paused' || status === 'cancelled') {
+            await supabase
+                .from('subscriptions')
+                .update({ status: 'failed', updated_at: new Date().toISOString() })
+                .eq('mp_payment_id', String(bodyId));
+        }
+
+        return new Response('OK', { status: 200 });
+    }
+
     if (bodyTopic !== 'payment' && bodyTopic !== 'payment.created' && bodyTopic !== 'payment.updated') {
-        // Just return 200 to acknowledge
         return new Response('Ignored', { status: 200 });
     }
 
@@ -85,14 +160,25 @@ serve(async (req) => {
     const payment = await response.json();
     console.log('Payment Status:', payment.status, 'ID:', payment.id);
 
-    // Verify Metadata Type
+    // Try using metadata first
     const type = payment.metadata?.type;
     const validTypes = ['saas_renewal', 'saas_subscription'];
+    let establishment_id = payment.metadata?.establishment_id;
+    let plan_id = payment.metadata?.plan_id;
+    let plan_name = payment.metadata?.plan_name;
 
-    if (validTypes.includes(type)) {
-        const { establishment_id, plan_id, plan_name } = payment.metadata;
-        
-        console.log(`Processing ${type} for Establishment: ${establishment_id}`);
+    // Fallback: use external_reference from payments created by subscriptions
+    if ((!establishment_id || !plan_id) && payment.external_reference) {
+        const ref = String(payment.external_reference);
+        if (ref.includes('-')) {
+            const parts = ref.split('-');
+            establishment_id = parts[0];
+            plan_id = parts[1];
+        }
+    }
+
+    if ((validTypes.includes(type)) || (establishment_id && plan_id)) {
+        console.log(`Processing payment for Establishment: ${establishment_id}`);
 
         if (payment.status === 'approved') {
             // 0. Idempotency Check
