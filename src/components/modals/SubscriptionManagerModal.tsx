@@ -227,17 +227,24 @@ export function SubscriptionManagerModal({ isOpen, onClose, plans, onSuccess, in
                     <span className="text-2xl font-bold text-[#10B981]">R$ {amountToPay.toFixed(2)}</span>
                 </div>
 
-                <MercadoPagoBrick 
-                    amount={amountToPay}
-                    email={user?.email || ''}
-                    onSuccess={handleBrickSuccess}
-                    onError={(err) => toast.error('Erro no pagamento')}
-                    customization={{
-                        visual: {
-                            style: { theme: 'dark' }
-                        }
-                    }}
-                />
+                {user?.email ? (
+                    <MercadoPagoBrick 
+                        amount={amountToPay}
+                        email={user.email}
+                        onSuccess={handleBrickSuccess}
+                        onError={(err) => toast.error('Erro no pagamento')}
+                        customization={{
+                            visual: {
+                                style: { theme: 'dark' }
+                            }
+                        }}
+                    />
+                ) : (
+                    <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center text-red-400">
+                        <p>Erro: Email do usuário não identificado.</p>
+                        <p className="text-sm">Por favor, faça login novamente.</p>
+                    </div>
+                )}
               </div>
             ) : (
               <>

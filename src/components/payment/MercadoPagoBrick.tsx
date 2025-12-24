@@ -83,6 +83,12 @@ export function MercadoPagoBrick({ amount, email, publicKey: propPublicKey, onSu
         return;
     }
 
+    if (!email) {
+        console.warn('Brick Init: Email is missing. Brick will NOT initialize.');
+        setInitError('Erro: Email do usuário não encontrado.');
+        return;
+    }
+
     const finalAmount = amount;
 
     // Only init if container is empty to avoid duplication
