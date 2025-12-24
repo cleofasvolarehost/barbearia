@@ -36,10 +36,8 @@ Deno.serve(async (req: Request) => {
   const body = await getBody(req);
   const targetUrl = body.target_url || `${url}/functions/v1/iugu-webhook`;
   const events = body.events || [
-    'invoice.payment_failed',
-    'invoice.payment_succeeded',
-    'invoice.created',
-    'invoice.status_changed'
+    'invoice.status_changed',
+    'invoice.created'
   ];
 
   const results: any[] = [];
@@ -59,4 +57,3 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ ok: false, error: e.message || String(e) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 });
-
