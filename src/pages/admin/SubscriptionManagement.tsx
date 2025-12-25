@@ -27,25 +27,25 @@ export default function SubscriptionManagementPage() {
   const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
 
   useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('saas_plans')
+          .select('*')
+          .order('price');
+          
+        if (error) throw error;
+        setPlans(data || []);
+      } catch (error) {
+        console.error('Error fetching plans:', error);
+        toast.error('Erro ao carregar planos');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     fetchPlans();
   }, []);
-
-  const fetchPlans = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('saas_plans')
-        .select('*')
-        .order('price');
-        
-      if (error) throw error;
-      setPlans(data || []);
-    } catch (error) {
-      console.error('Error fetching plans:', error);
-      toast.error('Erro ao carregar planos');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ------------------------------------------------------------------
   // VIEW 1: SALES SHOWCASE (No Active Subscription)
@@ -70,13 +70,15 @@ export default function SubscriptionManagementPage() {
                     </div>
                 ) : (
                     <div className="grid md:grid-cols-3 gap-8">
-                        {plans.map((plan, index) => {
+                        {plans
+                            .filter(plan => plan && plan.id)
+                            .map((plan, index) => {
                             // Simple logic to highlight the middle plan or specific plan
-                            const isHighlighted = index === 1 || plan.name.includes('Pro'); 
+                            const isHighlighted = index === 1 || (plan.name && plan.name.includes('Pro')); 
                             
                             return (
                                 <div 
-                                    key={plan.id} 
+                                    key={String(plan.id || `plan-${index}`)} 
                                     className={`relative p-8 rounded-3xl border transition-all duration-300 ${
                                     isHighlighted
                                         ? 'bg-gradient-to-b from-[#7C3AED]/10 to-transparent border-[#7C3AED] shadow-2xl shadow-[#7C3AED]/20 scale-105 z-10'
@@ -89,15 +91,15 @@ export default function SubscriptionManagementPage() {
                                         </div>
                                     )}
 
-                                    <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                                    <h3 className="text-2xl font-bold mb-2">{plan.name || 'Plano'}</h3>
                                     <p className="text-gray-400 mb-6 min-h-[48px]">
                                         {plan.description || 'A solução completa para sua gestão.'}
                                     </p>
 
                                     <div className="mb-8">
                                         <div className="flex items-end gap-1">
-                                            <span className="text-5xl font-bold text-white">R$ {Number(plan.price).toFixed(0)}</span>
-                                            <span className="text-gray-400 mb-1">/{plan.interval_days === 30 ? 'mês' : 'ano'}</span>
+                                            <span className="text-5xl font-bold text-white">R$ {Number(plan.price || 0).toFixed(0)}</span>
+                                            <span className="text-gray-400 mb-1">/{plan.interval_days === 30 ? 'mês' : plan.interval_days === 365 ? 'ano' : 'período'}</span>
                                         </div>
                                     </div>
 
@@ -113,11 +115,28 @@ export default function SubscriptionManagementPage() {
                                     </button>
 
                                     <ul className="space-y-4">
-                                        {(plan.features || [
-                                            'Agendamento Ilimitado',
-                                            'Gestão Financeira',
-                                            'Suporte Prioritário'
-                                        ]).map((feature: string, i: number) => (
+                                        {(() => {
+                                            let features = plan.features;
+                                            if (typeof features === 'string') {
+                                                try {
+                                                    features = JSON.parse(features);
+                                                } catch (e) {
+                                                    features = [];
+                                                }
+                                            }
+                                            if (!Array.isArray(features)) {
+                                                features = [
+                                                    'Agendamento Ilimitado',
+                                                    'Gestão Financeira',
+                                                    'Suporte Prioritário'
+                                                ];
+                                            }
+                                            return features.length > 0 ? features : [
+                                                'Agendamento Ilimitado',
+                                                'Gestão Financeira',
+                                                'Suporte Prioritário'
+                                            ];
+                                        })().map((feature: string, i: number) => (
                                             <li key={i} className="flex items-start gap-3">
                                                 <div className={`mt-1 p-1 rounded-full ${isHighlighted ? 'bg-[#10B981]/20' : 'bg-white/10'}`}>
                                                     <Check className={`w-3 h-3 ${isHighlighted ? 'text-[#10B981]' : 'text-gray-400'}`} />
@@ -335,13 +354,15 @@ export default function SubscriptionManagementPage() {
                                     <p className="text-gray-400">Nenhum plano disponível no momento.</p>
                                 </div>
                             ) : (
-                                plans.map(plan => {
+                                plans
+                                    .filter(plan => plan && plan.id)
+                                    .map(plan => {
                                     const isCurrent = plan.name === establishment?.subscription_plan;
                                     return (
-                                        <div key={plan.id} className={`p-6 rounded-2xl border ${isCurrent ? 'border-[#10B981] bg-[#10B981]/10' : 'border-white/10 bg-white/5'} flex justify-between items-center`}>
+                                        <div key={String(plan.id)} className={`p-6 rounded-2xl border ${isCurrent ? 'border-[#10B981] bg-[#10B981]/10' : 'border-white/10 bg-white/5'} flex justify-between items-center`}>
                                             <div>
-                                                <h3 className="font-bold text-lg">{plan.name}</h3>
-                                                <p className="text-gray-400">R$ {plan.price}/{plan.interval_days === 30 ? 'mês' : 'ano'}</p>
+                                                <h3 className="font-bold text-lg">{plan.name || 'Plano'}</h3>
+                                                <p className="text-gray-400">R$ {Number(plan.price || 0).toFixed(2)}/{plan.interval_days === 30 ? 'mês' : plan.interval_days === 365 ? 'ano' : 'período'}</p>
                                             </div>
                                             {isCurrent ? (
                                                 <span className="text-[#10B981] font-bold flex items-center gap-2"><Check className="w-4 h-4" /> Atual</span>
