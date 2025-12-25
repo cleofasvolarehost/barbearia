@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { Sparkles, Check, Zap, Shield, Crown, AlertTriangle, ArrowRight, Calendar, CreditCard, XCircle, Clock } from 'lucide-react';
 import { useEstablishment } from '../contexts/EstablishmentContext';
-import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/api';
 import { toast } from 'react-hot-toast';
@@ -16,6 +15,7 @@ export default function Subscription() {
 
   useEffect(() => {
     fetchPlans();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchPlans = async () => {
@@ -124,7 +124,8 @@ export default function Subscription() {
     }
   };
 
-  const getPeriodLabel = (days: number) => {
+  const getPeriodLabel = (days: number | undefined | null) => {
+    if (!days) return 'período';
     if (days === 30) return 'mês';
     if (days === 90) return '3 meses';
     if (days === 180) return '6 meses';
@@ -254,22 +255,24 @@ export default function Subscription() {
 
         {/* Plans Grid */}
         <div className="grid md:grid-cols-3 gap-8">
-          {plans.map((plan, index) => {
+          {plans && plans.length > 0 ? plans
+            .filter(plan => plan && plan.id)
+            .map((plan, index) => {
              const isCurrentPlan = establishment?.subscription_plan === plan.name && !isExpired;
              
              return (
             <motion.div
-              key={plan.id}
+              key={String(plan.id || `plan-${index}`)}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               className={`plan-card relative p-8 rounded-3xl border flex flex-col transition-all duration-300 ${
-                plan.is_recommended
+                plan.is_recommended === true
                   ? 'bg-gradient-to-b from-[#7C3AED]/10 to-transparent border-[#7C3AED] shadow-2xl shadow-[#7C3AED]/20 scale-105 z-10'
                   : 'bg-white/5 backdrop-blur border-white/10 hover:bg-white/10'
               } ${isCurrentPlan ? 'ring-2 ring-green-500 border-green-500 bg-green-500/5' : ''}`}
             >
-              {plan.is_recommended && (
+              {plan.is_recommended === true && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] text-sm font-bold shadow-lg">
                   Mais Popular
                 </div>
@@ -282,13 +285,13 @@ export default function Subscription() {
               )}
 
               <div className="mb-6">
-                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                <h3 className="text-xl font-bold mb-2">{plan.name || 'Plano'}</h3>
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm text-gray-400">R$</span>
-                  <span className="text-4xl font-black text-white">{plan.price}</span>
+                  <span className="text-4xl font-black text-white">{plan.price || '0.00'}</span>
                   <span className="text-gray-400">/{getPeriodLabel(plan.interval_days)}</span>
                 </div>
-                <p className="text-sm text-gray-400 mt-2">{plan.description}</p>
+                <p className="text-sm text-gray-400 mt-2">{plan.description || ''}</p>
               </div>
 
               <ul className="space-y-4 mb-8 flex-1">
@@ -310,7 +313,7 @@ export default function Subscription() {
                 className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
                   isCurrentPlan && isActive
                     ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30'
-                    : plan.is_recommended
+                    : plan.is_recommended === true
                         ? 'bg-gradient-to-r from-[#7C3AED] to-[#2DD4BF] hover:shadow-lg hover:shadow-[#7C3AED]/50 text-white'
                         : 'bg-white/10 hover:bg-white/20 text-white'
                 }`}
@@ -326,7 +329,11 @@ export default function Subscription() {
                 )}
               </button>
             </motion.div>
-          )})}
+          )}) : (
+            <div className="col-span-3 text-center py-12 text-gray-400">
+              <p>Nenhum plano disponível no momento.</p>
+            </div>
+          )}
         </div>
 
         {/* FAQ / Trust */}
