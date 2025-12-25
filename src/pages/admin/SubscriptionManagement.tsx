@@ -28,8 +28,12 @@ export default function SubscriptionManagementPage() {
   const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
 
   // Calculate derived values after all hooks
+  // IMPORTANT: All hooks must be called before any conditional returns
   const hasActiveSubscription = establishment?.subscription_status === 'active';
   const shouldShowSalesView = !loading && !establishmentLoading && (!establishment || !hasActiveSubscription);
+  
+  // Ensure all hooks are always called in the same order
+  // This prevents React error #300 (Rendered fewer hooks than expected)
 
   useEffect(() => {
     const fetchPlans = async () => {
