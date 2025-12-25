@@ -17,11 +17,29 @@ const EstablishmentContext = createContext<EstablishmentContextType>({
 });
 
 export function EstablishmentProvider({ children }: { children: ReactNode }) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'EstablishmentContext.tsx:19',message:'EstablishmentProvider render start',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   const { user } = useAuth();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'EstablishmentContext.tsx:20',message:'useAuth called',data:{hasUser:!!user},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   const [establishment, setEstablishment] = useState<Establishment | null>(null);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'EstablishmentContext.tsx:21',message:'useState establishment called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   const [loading, setLoading] = useState(true);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'EstablishmentContext.tsx:22',message:'useState loading called',data:{loading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   const navigate = useNavigate();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'EstablishmentContext.tsx:23',message:'useNavigate called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   const location = useLocation();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'EstablishmentContext.tsx:24',message:'useLocation called',data:{pathname:location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
 
   const fetchEstablishment = useCallback(async () => {
     if (!user) {
@@ -90,6 +108,9 @@ export function EstablishmentProvider({ children }: { children: ReactNode }) {
     loading,
     refreshEstablishment: fetchEstablishment
   }), [establishment, loading, fetchEstablishment]);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'EstablishmentContext.tsx:88',message:'useMemo value called',data:{hasEstablishment:!!establishment,loading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
 
   return (
     <EstablishmentContext.Provider value={value}>

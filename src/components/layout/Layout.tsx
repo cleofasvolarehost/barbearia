@@ -15,11 +15,26 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Layout.tsx:17',message:'Layout render start',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const location = useLocation();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Layout.tsx:18',message:'useLocation called',data:{pathname:location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const path = location.pathname;
   const { user, signOut } = useAuth();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Layout.tsx:20',message:'useAuth called',data:{hasUser:!!user},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const [role, setRole] = useState<string | null>(null);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Layout.tsx:21',message:'useState role called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Layout.tsx:22',message:'useState isDrawerOpen called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
 
   useEffect(() => {
     if (user) {
@@ -55,6 +70,9 @@ export default function Layout({ children }: LayoutProps) {
 
   // Desktop Sidebar: Only for Admin/Owner/Barber (Not Clients)
   const showSidebar = showNav && role !== 'client';
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Layout.tsx:57',message:'Before conditional component render',data:{showSidebar,showMobileNav,willRenderMobileHeader:showNav,willRenderDesktopSidebar:showSidebar},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
 
   // Mobile Nav: For Everyone Logged In
   const showMobileNav = showNav;

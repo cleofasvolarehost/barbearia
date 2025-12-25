@@ -2,7 +2,13 @@ import { Bell, Zap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 export function MobileHeader() {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MobileHeader.tsx:4',message:'MobileHeader render start',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const { user } = useAuth();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MobileHeader.tsx:5',message:'MobileHeader useAuth called',data:{hasUser:!!user},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   
   return (
     <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#121212]/80 backdrop-blur-md border-b border-white/5 px-4 h-16 flex items-center justify-between">

@@ -11,10 +11,22 @@ interface DesktopSidebarProps {
 }
 
 export function DesktopSidebar({ onViewChange }: DesktopSidebarProps) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DesktopSidebar.tsx:13',message:'DesktopSidebar render start',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const { user, signOut } = useAuth();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DesktopSidebar.tsx:14',message:'DesktopSidebar useAuth called',data:{hasUser:!!user},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const location = useLocation();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DesktopSidebar.tsx:15',message:'DesktopSidebar useLocation called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const activeView = location.pathname;
   const [role, setRole] = useState<string | null>(null);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DesktopSidebar.tsx:17',message:'DesktopSidebar useState role called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
 
   useEffect(() => {
     if (user) {

@@ -9,10 +9,22 @@ import { createCardToken } from '../../lib/iugu';
 import { TrendingUp, Clock, CreditCard, Check, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function SubscriptionManagementPage() {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubscriptionManagement.tsx:11',message:'SubscriptionManagementPage render start',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   // All hooks must be called before any conditional returns
   const { establishment, loading: establishmentLoading } = useEstablishment();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubscriptionManagement.tsx:13',message:'useEstablishment called',data:{hasEstablishment:!!establishment,establishmentLoading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   const { user } = useAuth();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubscriptionManagement.tsx:14',message:'useAuth called',data:{hasUser:!!user},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   const navigate = useNavigate();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubscriptionManagement.tsx:15',message:'useNavigate called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +38,9 @@ export default function SubscriptionManagementPage() {
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'plans' | 'renew' | 'payment'>('plans');
   const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubscriptionManagement.tsx:27',message:'All useState hooks called',data:{totalHooks:10},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
 
   // Calculate derived values after all hooks
   // IMPORTANT: All hooks must be called before any conditional returns
@@ -56,10 +71,16 @@ export default function SubscriptionManagementPage() {
     fetchPlans();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubscriptionManagement.tsx:54',message:'useEffect called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
 
   // ------------------------------------------------------------------
   // VIEW 1: SALES SHOWCASE (No Active Subscription)
   // ------------------------------------------------------------------
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubscriptionManagement.tsx:57',message:'Before conditional return',data:{shouldShowSalesView,loading,establishmentLoading,hasEstablishment:!!establishment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   if (shouldShowSalesView) {
       return (
         <div className="min-h-screen bg-[#121212] text-white p-6">
@@ -264,9 +285,15 @@ export default function SubscriptionManagementPage() {
       setLoading(false);
     }
   };
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubscriptionManagement.tsx:289',message:'Before final loading check',data:{loading,willReturnEarly:loading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
 
   if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin text-white" /></div>;
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubscriptionManagement.tsx:291',message:'SubscriptionManagementPage final render',data:{loading,hasEstablishment:!!establishment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   return (
     <div className="min-h-screen bg-[#121212] text-white p-6">
       <div className="max-w-5xl mx-auto">

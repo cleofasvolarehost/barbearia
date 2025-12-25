@@ -8,8 +8,17 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:10',message:'ProtectedRoute render start',data:{allowedRoles},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   const { user, loading } = useAuth();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:11',message:'useAuth called',data:{hasUser:!!user,loading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:12',message:'useState isAuthorized called',data:{isAuthorized},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
 
   useEffect(() => {
     const checkRole = async () => {
@@ -101,6 +110,9 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
 
   // Bypass loading check if in dev mode
   const isDevMode = localStorage.getItem('trae_dev_mode') === 'true';
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:105',message:'Before first conditional return',data:{loading,isAuthorized,isDevMode,willReturnEarly:(loading && !isDevMode) || isAuthorized === null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
 
   if ((loading && !isDevMode) || isAuthorized === null) {
     return (
@@ -110,6 +122,9 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     );
   }
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProtectedRoute.tsx:113',message:'Before second conditional return',data:{hasUser:!!user,isAuthorized,isDevMode,willReturnEarly:(!user && !isDevMode) || !isAuthorized},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   if ((!user && !isDevMode) || !isAuthorized) {
     console.log('ProtectedRoute: Redirecting to login. User:', !!user, 'Authorized:', isAuthorized);
     // If not authorized but logged in, it means role mismatch or error
