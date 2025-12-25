@@ -9,6 +9,7 @@ import { createCardToken } from '../../lib/iugu';
 import { TrendingUp, Clock, CreditCard, Check, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function SubscriptionManagementPage() {
+  // All hooks must be called before any conditional returns
   const { establishment, loading: establishmentLoading } = useEstablishment();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -25,6 +26,10 @@ export default function SubscriptionManagementPage() {
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'plans' | 'renew' | 'payment'>('plans');
   const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
+
+  // Calculate derived values after all hooks
+  const hasActiveSubscription = establishment?.subscription_status === 'active';
+  const shouldShowSalesView = !loading && !establishmentLoading && (!establishment || !hasActiveSubscription);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -45,12 +50,13 @@ export default function SubscriptionManagementPage() {
     };
     
     fetchPlans();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ------------------------------------------------------------------
   // VIEW 1: SALES SHOWCASE (No Active Subscription)
   // ------------------------------------------------------------------
-  if (!loading && !establishmentLoading && (!establishment || establishment.subscription_status !== 'active')) {
+  if (shouldShowSalesView) {
       return (
         <div className="min-h-screen bg-[#121212] text-white p-6">
             <div className="max-w-7xl mx-auto mt-10">
