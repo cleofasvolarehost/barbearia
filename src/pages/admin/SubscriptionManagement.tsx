@@ -24,6 +24,7 @@ export default function SubscriptionManagementPage() {
   const [paymentType, setPaymentType] = useState<'upgrade' | 'renewal' | 'new_subscription'>('renewal');
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'plans' | 'renew' | 'payment'>('plans');
+  const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
 
   useEffect(() => {
     fetchPlans();
@@ -204,7 +205,6 @@ export default function SubscriptionManagementPage() {
     setPaymentStep('checkout');
   };
 
-  const [cardData, setCardData] = useState({ number: '', name: '', month: '', year: '', cvv: '' });
   const handleCardPay = async () => {
     setLoading(true);
     try {
