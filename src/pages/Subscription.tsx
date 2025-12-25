@@ -28,10 +28,28 @@ export default function Subscription() {
       
       if (error) throw error;
       
-      const formattedPlans = (data || []).map(p => ({
-          ...p,
-          price: Number(p.price).toFixed(2),
-      }));
+      const formattedPlans = (data || []).map(p => {
+          // Parse features if it's a string (JSON from database)
+          let features = p.features;
+          if (typeof features === 'string') {
+              try {
+                  features = JSON.parse(features);
+              } catch (e) {
+                  console.warn('Failed to parse features for plan:', p.id, e);
+                  features = [];
+              }
+          }
+          // Ensure features is an array
+          if (!Array.isArray(features)) {
+              features = [];
+          }
+          
+          return {
+              ...p,
+              price: Number(p.price).toFixed(2),
+              features: features,
+          };
+      });
 
       setPlans(formattedPlans);
     } catch (error) {
@@ -274,12 +292,16 @@ export default function Subscription() {
               </div>
 
               <ul className="space-y-4 mb-8 flex-1">
-                {Array.isArray(plan.features) && plan.features.map((feature: string, i: number) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
-                    <Check className="w-5 h-5 text-[#2DD4BF] flex-shrink-0" />
-                    {feature}
-                  </li>
-                ))}
+                {Array.isArray(plan.features) && plan.features.length > 0 ? (
+                  plan.features.map((feature: string, i: number) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
+                      <Check className="w-5 h-5 text-[#2DD4BF] flex-shrink-0" />
+                      <span>{String(feature)}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-sm text-gray-500">Nenhuma feature disponível</li>
+                )}
               </ul>
 
               <button
