@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Establishment } from '../types/database';
@@ -23,7 +23,7 @@ export function EstablishmentProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const fetchEstablishment = async () => {
+  const fetchEstablishment = useCallback(async () => {
     if (!user) {
       setEstablishment(null);
       setLoading(false);
@@ -47,11 +47,11 @@ export function EstablishmentProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     fetchEstablishment();
-  }, [user?.id]);
+  }, [fetchEstablishment]);
 
   // Logic: If user logs in and has NO establishment -> Redirect to /admin/setup
   // Logic: If establishment is SUSPENDED -> Redirect to /financeiro (Free Lunch Bug)
@@ -89,7 +89,7 @@ export function EstablishmentProvider({ children }: { children: ReactNode }) {
     establishment,
     loading,
     refreshEstablishment: fetchEstablishment
-  }), [establishment, loading]);
+  }), [establishment, loading, fetchEstablishment]);
 
   return (
     <EstablishmentContext.Provider value={value}>
