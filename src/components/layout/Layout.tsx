@@ -70,12 +70,12 @@ export default function Layout({ children }: LayoutProps) {
 
   // Desktop Sidebar: Only for Admin/Owner/Barber (Not Clients)
   const showSidebar = showNav && role !== 'client';
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Layout.tsx:57',message:'Before conditional component render',data:{showSidebar,showMobileNav,willRenderMobileHeader:showNav,willRenderDesktopSidebar:showSidebar},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
 
   // Mobile Nav: For Everyone Logged In
   const showMobileNav = showNav;
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/38f7e906-e821-443a-ac76-c0604c083a83',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Layout.tsx:60',message:'Before conditional component render',data:{showSidebar,showMobileNav,willRenderMobileHeader:showNav,willRenderDesktopSidebar:showSidebar},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
 
   const handleLogout = async () => {
       await signOut();
