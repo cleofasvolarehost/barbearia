@@ -26,6 +26,10 @@ export const appointmentsService = {
         )
       `, { count: 'exact' });
 
+    if (filters.barbershop_id) {
+      query = query.eq('barbershop_id', filters.barbershop_id);
+    }
+
     if (filters.dateRange) {
       const startDate = filters.dateRange.start.split('T')[0];
       const endDate = filters.dateRange.end.split('T')[0];
