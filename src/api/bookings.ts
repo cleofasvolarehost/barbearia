@@ -9,6 +9,9 @@ interface CreateBookingParams {
   serviceId: string;
   userId: string;
   price: number;
+  barberName?: string;
+  serviceName?: string;
+  establishmentId?: string;
   // WhatsApp Context
   shopConfig?: any;
   clientPhone?: string;
@@ -44,7 +47,13 @@ export const bookingsApi = {
       const bookingId = data.id;
 
       // 2. Trigger WhatsApp (Only if DB success)
-      if (params.shopConfig?.is_active && params.clientPhone) {
+      const shouldSendWhatsApp = Boolean(
+        params.shopConfig?.is_active &&
+          params.clientPhone &&
+          (params.shopConfig?.triggers?.confirmation ?? true)
+      );
+
+      if (shouldSendWhatsApp) {
         try {
             // SANITIZAÇÃO DE TELEFONE (OBRIGATÓRIO)
             let cleanPhone = params.clientPhone.replace(/\D/g, '');
@@ -61,13 +70,13 @@ export const bookingsApi = {
             }, bookingId);
 
             // 3. Salva Log no Painel
-            await supabase.from('whatsapp_logs').insert({
-                booking_id: bookingId,
-                phone_number: cleanPhone,
-                status: success ? 'sent' : 'failed',
-                message_body: 'Agendamento Confirmado',
-                client_id: params.userId !== 'guest_placeholder' ? params.userId : null,
-                created_at: new Date().toISOString()
+            await supabase.rpc('log_whatsapp_attempt', {
+                p_establishment_id: params.establishmentId,
+                p_phone: cleanPhone,
+                p_type: 'confirmation',
+                p_body: 'Agendamento Confirmado',
+                p_status: success ? 'sent' : 'failed',
+                p_response: { success, bookingId }
             });
 
         } catch (wsError) {
@@ -86,10 +95,16 @@ export const bookingsApi = {
 
   sendNotification: async (params: CreateBookingParams, bookingId: string): Promise<boolean> => {
     const config = params.shopConfig;
-    let msg = config.templates?.reminder || 'Olá {nome}, seu agendamento foi confirmado para {horario}.';
+    let msg = config.templates?.confirmation || 'Olá {nome}, seu agendamento foi confirmado para {horario}.';
+    const dateLabel = format(parseISO(params.date), 'dd/MM');
+    const timeLabel = params.time;
     
-    msg = msg.replace('{nome}', params.clientName || 'Cliente');
-    msg = msg.replace('{horario}', `${format(parseISO(params.date), 'dd/MM')} às ${params.time}`);
+    msg = msg.replace(/\{nome_cliente\}|\{nome\}/g, params.clientName || 'Cliente');
+    msg = msg.replace(/\{data\}/g, dateLabel);
+    msg = msg.replace(/\{hora\}/g, timeLabel);
+    msg = msg.replace(/\{horario\}/g, `${dateLabel} às ${timeLabel}`);
+    msg = msg.replace(/\{barbeiro\}/g, params.barberName || 'Barbeiro');
+    msg = msg.replace(/\{servico\}/g, params.serviceName || 'Serviço');
     
     return await sendWhatsApp({
         to: params.clientPhone!,

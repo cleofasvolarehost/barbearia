@@ -68,7 +68,34 @@ export default function BookSlug() {
           navigate('/'); 
           return;
         }
-        setShop(shopData);
+        let whatsappConfig = null;
+        const { data: whatsappData, error: whatsappError } = await supabase
+          .from('whatsapp_config')
+          .select('*')
+          .eq('establishment_id', shopData.id)
+          .single();
+
+        if (whatsappError && whatsappError.code !== 'PGRST116') {
+          console.error('Error loading WhatsApp config:', whatsappError);
+        } else {
+          whatsappConfig = whatsappData;
+        }
+
+        if (!whatsappConfig && (shopData.wordnet_instance_id || shopData.wordnet_token)) {
+          whatsappConfig = {
+            is_active: !!shopData.wordnet_instance_id,
+            instance_id: shopData.wordnet_instance_id,
+            api_token: shopData.wordnet_token,
+            templates: {
+              confirmation: 'Olá {nome}, seu agendamento foi confirmado para {horario}.'
+            },
+            triggers: {
+              confirmation: true
+            }
+          };
+        }
+
+        setShop({ ...shopData, whatsapp_config: whatsappConfig });
 
         const { data: servicesData } = await supabase
           .from('servicos')
@@ -273,6 +300,9 @@ export default function BookSlug() {
         serviceId: selectedService.id,
         userId: userId,
         price: selectedService.preco,
+        barberName: selectedBarber.nome,
+        serviceName: selectedService.nome,
+        establishmentId: shop?.id,
         shopConfig: shop?.whatsapp_config,
         clientPhone,
         clientName
